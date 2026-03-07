@@ -2,6 +2,7 @@ import time
 import cv2
 import numpy as np
 import mss
+import threading
 
 from GameWindow import GameWindow
 from Target import Target
@@ -27,13 +28,11 @@ class IdleSlayerBot:
             key=lambda t: t.priority
         )
 
-        self.chest_hunt = None
-        if chest_config.enabled:
-            self.chest_hunt = ChestHunt(chest_config, self.window, bot_config.monitor_index)
+        self.chest_hunt  = ChestHunt(chest_config, self.window, bot_config.monitor_index) \
+                           if chest_config.enabled else None
 
-        self.bonus_stage = None
-        if bonus_config.enabled:
-            self.bonus_stage = BonusStage(bonus_config, self.window, bot_config.monitor_index)
+        self.bonus_stage = BonusStage(bonus_config, self.window, bot_config.monitor_index) \
+                           if bonus_config.enabled else None
 
         self._print_startup()
 
@@ -45,7 +44,7 @@ class IdleSlayerBot:
         print(f"Cooldown: {self.cfg.cooldown}s | Check-Intervall: {self.cfg.check_interval}s")
         print(f"Chest Hunt:  {'aktiviert' if self.chest_hunt  else 'deaktiviert'}")
         print(f"Bonus Stage: {'aktiviert' if self.bonus_stage else 'deaktiviert'}")
-        print("Läuft... Drücke Ctrl+C zum Beenden.\n")
+        print("Läuft... Drücke Ctrl+C oder klicke Beenden zum Stoppen.\n")
 
     def _handle_d_key(self, now: float):
         if now - self.last_d_key >= self.cfg.d_key_interval:
@@ -67,23 +66,32 @@ class IdleSlayerBot:
                 self.last_jump = now
                 break
 
-    def run(self):
+    def run(self, stop_event: threading.Event = None,
+                  pause_event: threading.Event = None):
         with mss.mss() as sct:
             monitor = sct.monitors[self.cfg.monitor_index]
             try:
                 while True:
+                    # ── Stop prüfen ──
+                    if stop_event and stop_event.is_set():
+                        print("Bot gestoppt.")
+                        break
+
+                    # ── Pause prüfen ──
+                    if pause_event and pause_event.is_set():
+                        time.sleep(0.2)
+                        continue
+
                     now        = time.time()
                     screenshot = sct.grab(monitor)
                     frame      = np.array(screenshot)
                     gray       = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
 
-                    # Bonus Stage – höchste Priorität
                     if self.bonus_stage and self.bonus_stage.run(gray):
                         self.last_jump  = time.time()
                         self.last_d_key = time.time()
                         continue
 
-                    # Chest Hunt – zweite Priorität
                     if self.chest_hunt and self.chest_hunt.run(gray):
                         self.last_jump  = time.time()
                         self.last_d_key = time.time()

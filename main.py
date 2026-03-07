@@ -1,6 +1,6 @@
-import time
 from Bot import IdleSlayerBot
 from Config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
+from ConfigUI import ConfigUI
 
 bot_config = BotConfig(
     game_title              = "Idle Slayer",
@@ -12,7 +12,7 @@ bot_config = BotConfig(
     confidence_threshold    = 0.60,
     jump_key                = "space",
     cooldown                = 1.0,
-    check_interval          = 0.0,
+    check_interval          = 0.2,
 )
 
 chest_config = ChestHuntConfig(
@@ -34,13 +34,10 @@ bonus_config = BonusStageConfig(
     swipe_duration           = 0.4,
     close_button_template    = "bonus_stage_close.png",
     close_button_confidence  = 0.70,
-    jump_key                 = "space",  # Taste im Minispiel
-    jump_hold_time           = 0.05,     # Wie lange halten
-    jump_interval            = 3.0,      # Alle 3 Sekunden springen
+    jump_key                 = "space",
+    jump_hold_time           = 0.05,
+    jump_interval            = 3.0,
 )
-
-
-
 
 target_configs = [
     TargetConfig("bat.png",    1),
@@ -50,6 +47,16 @@ target_configs = [
 ]
 
 if __name__ == "__main__":
-    print("Skript startet in 3 Sekunden...")
-    time.sleep(3)
-    IdleSlayerBot(bot_config, target_configs, chest_config, bonus_config).run()
+    ui = ConfigUI(bot_config, chest_config, bonus_config, target_configs)
+    confirmed = ui.show()
+
+    if not confirmed:
+        print("Abgebrochen.")
+    else:
+        print("Skript startet...")
+        IdleSlayerBot(
+            bot_config    = ui.bot_config,
+            target_configs= ui.target_configs,
+            chest_config  = ui.chest_config,
+            bonus_config  = ui.bonus_config,
+        ).run()
