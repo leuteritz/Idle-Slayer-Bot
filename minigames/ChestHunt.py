@@ -2,9 +2,12 @@ import cv2
 import numpy as np
 import time
 import mss
+import os
 
 from TemplateMatcher import TemplateMatcher
 from Config import ChestHuntConfig
+
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 
 class ChestHunt(TemplateMatcher):
@@ -13,8 +16,8 @@ class ChestHunt(TemplateMatcher):
         self.game_window = game_window
         self._active     = False
 
-        self.template       = self._load_template(config.template)
-        self.panic_template = self._load_template(config.panic_button_template)
+        self.template       = self._load_template(config.template,              ASSETS_DIR)
+        self.panic_template = self._load_template(config.panic_button_template, ASSETS_DIR)
 
         with mss.mss() as sct:
             monitor = sct.monitors[monitor_index]

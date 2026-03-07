@@ -2,35 +2,34 @@ import cv2
 import numpy as np
 import os
 
-BASE_DIR    = os.path.dirname(__file__)
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 ENEMIES_DIR = os.path.join(BASE_DIR, "enemies")
 
 
 class TemplateMatcher:
 
-    def _load_template(self, filename: str) -> np.ndarray:
-        path  = os.path.join(ENEMIES_DIR, filename)
-        image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    def _load_template(self, filename: str, assets_dir: str = None) -> np.ndarray:
+        """Lädt ein Template. Nutzt assets_dir falls angegeben, sonst enemies/."""
+        directory = assets_dir if assets_dir else ENEMIES_DIR
+        path      = os.path.join(directory, filename)
+        image     = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         if image is None:
             raise FileNotFoundError(f"Template '{path}' nicht gefunden!")
         return image
 
     def _find_one(self, gray_frame: np.ndarray, template: np.ndarray, confidence: float):
-        """Gibt (cx, cy, conf, tw, th) zurück oder None."""
         result = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
         _, max_val, _, max_loc = cv2.minMaxLoc(result)
         if max_val >= confidence:
             th, tw = template.shape
-            cx = max_loc[0] + tw // 2
-            cy = max_loc[1] + th // 2
-            return cx, cy, max_val, tw, th
+            return max_loc[0] + tw // 2, max_loc[1] + th // 2, max_val, tw, th
         return None
 
     def _find_all(self, gray_frame: np.ndarray, template: np.ndarray, confidence: float):
         result    = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)
         locations = np.where(result >= confidence)
         th, tw    = template.shape
-        boxes = [
+        boxes     = [
             (pt[0] + tw // 2, pt[1] + th // 2)
             for pt in zip(*locations[::-1])
         ]

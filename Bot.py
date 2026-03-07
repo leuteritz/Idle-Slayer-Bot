@@ -6,8 +6,8 @@ import threading
 
 from GameWindow import GameWindow
 from Target import Target
-from ChestHunt import ChestHunt
-from BonusStage import BonusStage
+from minigames.ChestHunt import ChestHunt
+from minigames.BonusStage import BonusStage
 from Config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
 
 

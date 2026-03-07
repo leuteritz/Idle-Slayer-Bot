@@ -5,9 +5,12 @@ import mss
 import ctypes
 import win32gui
 import pyautogui
+import os
 
 from TemplateMatcher import TemplateMatcher
 from Config import BonusStageConfig
+
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 
 class BonusStage(TemplateMatcher):
@@ -17,9 +20,9 @@ class BonusStage(TemplateMatcher):
         self._active     = False
         self._last_jump  = 0.0
 
-        self.template_left  = self._load_template(config.template_swipe_left)
-        self.template_right = self._load_template(config.template_swipe_right)
-        self.close_template = self._load_template(config.close_button_template)
+        self.template_left  = self._load_template(config.template_swipe_left,   ASSETS_DIR)
+        self.template_right = self._load_template(config.template_swipe_right,  ASSETS_DIR)
+        self.close_template = self._load_template(config.close_button_template, ASSETS_DIR)
 
         with mss.mss() as sct:
             monitor = sct.monitors[monitor_index]
@@ -29,10 +32,6 @@ class BonusStage(TemplateMatcher):
 
         print(f"BonusStage bereit | Conf: {config.confidence} | "
               f"Jump alle {config.jump_interval}s | Links+Rechts Swipe aktiv")
-
-    # ──────────────────────────────────────────
-    #  HILFSMETHODEN
-    # ──────────────────────────────────────────
 
     def _grab_gray(self, sct) -> np.ndarray:
         monitor    = sct.monitors[self._monitor_idx]
@@ -78,11 +77,8 @@ class BonusStage(TemplateMatcher):
         previous = win32gui.GetForegroundWindow()
         self._force_focus()
 
-        # Startposition anfahren
         pyautogui.moveTo(start_x, abs_y, duration=0.1)
         time.sleep(0.15)
-
-        # Maustaste halten und nach links/rechts ziehen
         pyautogui.mouseDown()
         time.sleep(0.05)
         pyautogui.moveTo(end_x, abs_y, duration=self.config.swipe_duration)
@@ -133,10 +129,6 @@ class BonusStage(TemplateMatcher):
             return cx, cy, conf, tw, "right"
         return None
 
-    # ──────────────────────────────────────────
-    #  HAUPT-EINSTIEG
-    # ──────────────────────────────────────────
-
     def run(self, gray_frame: np.ndarray) -> bool:
         now = time.time()
 
@@ -149,7 +141,6 @@ class BonusStage(TemplateMatcher):
             return True
 
         match = self._detect_swipe(gray_frame)
-
         if not match:
             return False
 
