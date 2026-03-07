@@ -23,8 +23,9 @@ class ChestHuntConfig:
     confidence:              float = 0.70
     rows:                    int   = 3
     cols:                    int   = 10
-    panic_button_template:   str   = "panic_button.png"
+    panic_button_template:   str   = "chest_close.png"
     panic_button_confidence: float = 0.70
+
 
 
 @dataclass

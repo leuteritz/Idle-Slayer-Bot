@@ -18,11 +18,12 @@ bot_config = BotConfig(
 chest_config = ChestHuntConfig(
     enabled                  = True,
     template                 = "chest.png",
-    wait_per_chest           = 2.0,
+    wait_per_chest           = 5.0,
     confidence               = 0.70,
-    panic_button_template    = "panic_button.png",
+    panic_button_template    = "chest_close.png",
     panic_button_confidence  = 0.70,
 )
+
 
 bonus_config = BonusStageConfig(
     enabled                  = True,
