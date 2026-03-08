@@ -3,6 +3,7 @@ import numpy as np
 import time
 import mss
 import os
+import threading
 
 from TemplateMatcher import TemplateMatcher
 from Config import ChestHuntConfig
@@ -48,7 +49,9 @@ class ChestHunt(TemplateMatcher):
             return True
         return False
 
-    def run(self, gray_frame: np.ndarray) -> bool:
+    def run(self, gray_frame: np.ndarray,
+            pause_event: threading.Event = None,
+            stop_event: threading.Event = None) -> bool:
         chests   = self._find_all(gray_frame, self.template, self.config.confidence)
         expected = self.config.rows * self.config.cols
 
@@ -67,6 +70,11 @@ class ChestHunt(TemplateMatcher):
 
         with mss.mss() as sct:
             for i, (cx, cy) in enumerate(chests_sorted):
+                if stop_event and stop_event.is_set():
+                    return True
+                while pause_event and pause_event.is_set():
+                    time.sleep(0.2)
+
                 if self._handle_panic(sct):
                     print("  Mimik zugeschlagen – verlassen.\n")
                     return True
@@ -76,6 +84,10 @@ class ChestHunt(TemplateMatcher):
 
                 waited = 0.0
                 while waited < self.config.wait_per_chest:
+                    if stop_event and stop_event.is_set():
+                        return True
+                    while pause_event and pause_event.is_set():
+                        time.sleep(0.2)
                     time.sleep(0.5)
                     waited += 0.5
                     if self._handle_panic(sct):

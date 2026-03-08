@@ -96,7 +96,7 @@ class IdleSlayerBot:
                         self.last_d_key = time.time()
                         continue
 
-                    if self.chest_hunt and self.chest_hunt.run(gray):
+                    if self.chest_hunt and self.chest_hunt.run(gray, pause_event=pause_event, stop_event=stop_event):
                         self.last_jump  = time.time()
                         self.last_d_key = time.time()
                         continue
