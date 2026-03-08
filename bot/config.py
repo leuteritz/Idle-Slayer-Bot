@@ -7,6 +7,7 @@ class BotConfig:
     disable_failsafe:        bool  = False   # PyAutoGUI FailSafe deaktivieren (Maus in Ecke = Stop)
     monitor_index:           int   = 2
     d_key_interval:          float = 4.0
+    r_key_interval:          float = 600.0
     space_key_interval:      float = 0.3
     space_key_interval_fast: float = 0.05
     space_key_pause:         float = 0.1

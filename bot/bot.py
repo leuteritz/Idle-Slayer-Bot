@@ -23,6 +23,7 @@ class IdleSlayerBot:
             pyautogui.FAILSAFE = False
         self.window     = GameWindow(bot_config.game_title)
         self.last_d_key = 0
+        self.last_r_key = 0
 
         self.targets = sorted(
             [Target(t.filename, t.priority, bot_config.confidence_threshold)
@@ -53,6 +54,12 @@ class IdleSlayerBot:
             print("D gedrückt (Timer)")
             self.window.send_key('d')
             self.last_d_key = now
+
+    def _handle_r_key(self, now: float):
+        if now - self.last_r_key >= self.cfg.r_key_interval:
+            print("R gedrückt (Timer)")
+            self.window.send_key('r')
+            self.last_r_key = now
 
     def _handle_detection(self, gray_frame: np.ndarray):
         for target in self.targets:
@@ -96,6 +103,7 @@ class IdleSlayerBot:
                         continue
 
                     self._handle_d_key(now)
+                    self._handle_r_key(now)
                     self._handle_detection(gray)
                     time.sleep(self.cfg.check_interval)
 

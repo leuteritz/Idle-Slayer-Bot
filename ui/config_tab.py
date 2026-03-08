@@ -18,6 +18,7 @@ _LABELS = {
     "disable_failsafe":        "Disable FailSafe",
     "monitor_index":           "Monitor Index",
     "d_key_interval":          "D Key Interval (s)",
+    "r_key_interval":          "R Key Interval (s)",
     "space_key_interval":      "Jump Hold Time (s)",
     "space_key_interval_fast": "Jump Hold Fast (s)",
     "space_key_pause":         "Jump Pause (s)",
