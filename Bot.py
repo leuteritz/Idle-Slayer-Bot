@@ -22,7 +22,6 @@ class IdleSlayerBot:
         if bot_config.disable_failsafe:
             pyautogui.FAILSAFE = False
         self.window     = GameWindow(bot_config.game_title)
-        self.last_jump  = 0
         self.last_d_key = 0
 
         self.targets = sorted(
@@ -44,7 +43,7 @@ class IdleSlayerBot:
         for t in self.targets:
             print(f"  [{t.priority}] {t.name} | Confidence: {t.confidence}")
         print(f"Jump-Taste: '{self.cfg.jump_key}' | Hold: {self.cfg.space_key_interval}s")
-        print(f"Cooldown: {self.cfg.cooldown}s | Check-Intervall: {self.cfg.check_interval}s")
+        print(f"Check-Intervall: {self.cfg.check_interval}s")
         print(f"Chest Hunt:  {'aktiviert' if self.chest_hunt  else 'deaktiviert'}")
         print(f"Bonus Stage: {'aktiviert' if self.bonus_stage else 'deaktiviert'}")
         print("Läuft... Drücke Ctrl+C oder klicke Beenden zum Stoppen.\n")
@@ -55,9 +54,7 @@ class IdleSlayerBot:
             self.window.send_key('d')
             self.last_d_key = now
 
-    def _handle_detection(self, gray_frame: np.ndarray, now: float):
-        if now - self.last_jump <= self.cfg.cooldown:
-            return
+    def _handle_detection(self, gray_frame: np.ndarray):
         for target in self.targets:
             match = target.find(gray_frame)
             if match:
@@ -66,7 +63,6 @@ class IdleSlayerBot:
                 self.window.send_key(self.cfg.jump_key, hold_time=self.cfg.space_key_interval)
                 time.sleep(self.cfg.space_key_pause)
                 self.window.send_key(self.cfg.jump_key, hold_time=self.cfg.space_key_interval_fast)
-                self.last_jump = now
                 break
 
     def run(self, stop_event: threading.Event = None,
@@ -92,17 +88,15 @@ class IdleSlayerBot:
                     gray       = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
 
                     if self.bonus_stage and self.bonus_stage.run(gray):
-                        self.last_jump  = time.time()
                         self.last_d_key = time.time()
                         continue
 
                     if self.chest_hunt and self.chest_hunt.run(gray, pause_event=pause_event, stop_event=stop_event):
-                        self.last_jump  = time.time()
                         self.last_d_key = time.time()
                         continue
 
                     self._handle_d_key(now)
-                    self._handle_detection(gray, now)
+                    self._handle_detection(gray)
                     time.sleep(self.cfg.check_interval)
 
             except pyautogui.FailSafeException as e:

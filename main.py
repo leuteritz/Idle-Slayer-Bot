@@ -11,8 +11,6 @@ bot_config = BotConfig(
     space_key_pause         = 0.1,
     confidence_threshold    = 0.60,
     jump_key                = "space",
-    cooldown                = 1.0,
-    check_interval          = 0.2,
 )
 
 chest_config = ChestHuntConfig(

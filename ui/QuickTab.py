@@ -1,7 +1,20 @@
 import tkinter as tk
 from tkinter import ttk
 
-# (section, field_name, lesbares Label, Beschreibung)
+BASE   = "#1e1e2e"
+MANTLE = "#181825"
+SURF0  = "#313244"
+SURF1  = "#45475a"
+TEXT   = "#cdd6f4"
+DIM    = "#7f849c"
+BLUE   = "#89b4fa"
+
+FONT_UI   = ("Segoe UI", 10)
+FONT_BOLD = ("Segoe UI", 10, "bold")
+FONT_SMALL = ("Segoe UI", 8)
+FONT_HDR  = ("Segoe UI", 9, "bold")
+
+# (section, field_name, label, description)
 QUICK_FIELDS = [
     ("bot",   "disable_failsafe",        "FailSafe deaktivieren",  "Maus in Ecke löst sonst Stop aus"),
     ("bot",   "d_key_interval",          "D-Taste Intervall (s)",  "Alle X Sekunden wird D gedrückt"),
@@ -17,54 +30,55 @@ QUICK_FIELDS = [
 ]
 
 _SECTION_LABELS = {
-    "bot":   "🤖  Bot",
-    "chest": "📦  Chest Hunt",
-    "bonus": "⭐  Bonus Stage",
+    "bot":   ("🤖", "Bot"),
+    "chest": ("📦", "Chest Hunt"),
+    "bonus": ("⭐", "Bonus Stage"),
 }
 
 
 class QuickTab:
-    """Schnelleinstellungen – nur die wichtigsten Felder, übersichtlich beschriftet."""
-
     def __init__(self, parent, configs: dict, entries: dict):
-        """
-        configs: {"bot": BotConfig, "chest": ChestHuntConfig, "bonus": BonusStageConfig}
-        entries: gemeinsames Variablen-Dict (wird mit ConfigTab geteilt)
-        """
-        canvas    = tk.Canvas(parent, bg="#1e1e2e", highlightthickness=0)
+        canvas    = tk.Canvas(parent, bg=BASE, highlightthickness=0)
         scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        inner     = tk.Frame(canvas, bg="#1e1e2e")
+        inner     = tk.Frame(canvas, bg=BASE)
 
         inner.bind("<Configure>",
                    lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=inner, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left",  fill="both", expand=True)
+        canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        def _scroll(e):
+            canvas.yview_scroll(-1 * (e.delta // 120), "units")
+        canvas.bind("<MouseWheel>", _scroll)
+        inner.bind("<MouseWheel>", _scroll)
+
         last_section = None
-        row          = 0
+        row = 0
 
         for section, field_name, label, desc in QUICK_FIELDS:
             cfg_obj = configs[section]
             val     = getattr(cfg_obj, field_name)
 
-            # Abschnitt-Header
+            # Section header
             if section != last_section:
                 if last_section is not None:
-                    tk.Frame(inner, bg="#313244", height=1).grid(
+                    tk.Frame(inner, bg=SURF0, height=1).grid(
                         row=row, column=0, columnspan=2,
-                        sticky="ew", padx=12, pady=(4, 8))
+                        sticky="ew", padx=16, pady=(2, 10))
                     row += 1
-                tk.Label(inner, text=_SECTION_LABELS[section],
-                         bg="#1e1e2e", fg="#89b4fa",
-                         font=("Consolas", 10, "bold")
-                         ).grid(row=row, column=0, columnspan=2,
-                                sticky="w", padx=12, pady=(10, 4))
+
+                icon, name = _SECTION_LABELS[section]
+                hdr_frame = tk.Frame(inner, bg=BASE)
+                hdr_frame.grid(row=row, column=0, columnspan=2,
+                               sticky="w", padx=16, pady=(14, 6))
+                tk.Label(hdr_frame, text=f"{icon}  {name}",
+                         bg=BASE, fg=BLUE, font=FONT_BOLD).pack(side="left")
                 row += 1
                 last_section = section
 
-            # Var anlegen oder wiederverwenden
+            # Reuse or create var
             if (section, field_name) not in entries:
                 var = tk.BooleanVar(value=val) if isinstance(val, bool) \
                       else tk.StringVar(value=str(val))
@@ -72,20 +86,29 @@ class QuickTab:
             else:
                 var = entries[(section, field_name)]
 
-            # Label mit grauer Beschreibung
-            lbl_frame = tk.Frame(inner, bg="#1e1e2e")
-            lbl_frame.grid(row=row, column=0, sticky="w", padx=(16, 6), pady=2)
-            tk.Label(lbl_frame, text=label, bg="#1e1e2e", fg="#cdd6f4",
-                     font=("Consolas", 10), anchor="w", width=26).pack(anchor="w")
-            tk.Label(lbl_frame, text=desc,  bg="#1e1e2e", fg="#6c7086",
-                     font=("Consolas", 8),  anchor="w").pack(anchor="w")
+            # Row card
+            card = tk.Frame(inner, bg=SURF0, padx=14, pady=8)
+            card.grid(row=row, column=0, columnspan=2,
+                      sticky="ew", padx=16, pady=2)
+            inner.columnconfigure(0, weight=1)
 
-            # Input
+            label_col = tk.Frame(card, bg=SURF0)
+            label_col.pack(side="left", fill="x", expand=True)
+
+            tk.Label(label_col, text=label, bg=SURF0, fg=TEXT,
+                     font=FONT_UI, anchor="w").pack(anchor="w")
+            tk.Label(label_col, text=desc, bg=SURF0, fg=DIM,
+                     font=FONT_SMALL, anchor="w").pack(anchor="w")
+
             if isinstance(val, bool):
-                ttk.Checkbutton(inner, variable=var).grid(
-                    row=row, column=1, padx=6, pady=2, sticky="w")
+                ttk.Checkbutton(card, variable=var).pack(side="right", padx=(8, 0))
             else:
-                ttk.Entry(inner, textvariable=var, width=10).grid(
-                    row=row, column=1, padx=6, pady=2, sticky="w")
+                ttk.Entry(card, textvariable=var, width=10).pack(side="right", padx=(8, 0))
+
+            card.bind("<MouseWheel>", _scroll)
+            label_col.bind("<MouseWheel>", _scroll)
 
             row += 1
+
+        # Bottom padding
+        tk.Frame(inner, bg=BASE, height=12).grid(row=row, column=0, columnspan=2)

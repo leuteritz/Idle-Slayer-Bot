@@ -11,6 +11,37 @@ from ui.QuickTab import QuickTab
 from ui.ConfigTab import ConfigTab
 from ui.TargetTab import TargetTab
 
+# ── Catppuccin Mocha ──────────────────────────────────────────
+BASE   = "#1e1e2e"
+MANTLE = "#181825"
+CRUST  = "#11111b"
+SURF0  = "#313244"
+SURF1  = "#45475a"
+TEXT   = "#cdd6f4"
+DIM    = "#6c7086"
+BLUE   = "#89b4fa"
+GREEN  = "#a6e3a1"
+ORANGE = "#fab387"
+RED    = "#f38ba8"
+
+FONT_UI   = ("Segoe UI", 10)
+FONT_BOLD = ("Segoe UI", 10, "bold")
+FONT_HDR  = ("Segoe UI", 13, "bold")
+
+NAV_ITEMS = [
+    ("quick",   "🚀", "Übersicht"),
+    ("bot",     "🤖", "Bot"),
+    ("chest",   "📦", "Chest Hunt"),
+    ("bonus",   "⭐", "Bonus Stage"),
+    ("targets", "🎯", "Targets"),
+]
+
+
+def _lighten(hex_color: str, amount: int = 20) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"#{min(255, r+amount):02x}{min(255, g+amount):02x}{min(255, b+amount):02x}"
+
 
 class ConfigUI:
     def __init__(self, bot_config: BotConfig,
@@ -29,122 +60,190 @@ class ConfigUI:
         self._pause_event = threading.Event()
         self._running     = False
         self._paused      = False
-        self._entries     = {}   # geteilt zwischen QuickTab + ConfigTab
+        self._entries     = {}
+        self._active_page = None
+        self._nav_refs    = {}   # page_name -> (frame, accent, inner, lbl)
 
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
         self.root.resizable(True, True)
-        self.root.minsize(600, 700)
-        self.root.configure(bg="#1e1e2e")
+        self.root.minsize(700, 740)
+        self.root.configure(bg=BASE)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
+        self._apply_style()
         self._build_ui()
         self._poll_log()
 
-    # ──────────────────────────────────────────
-    #  STYLE
-    # ──────────────────────────────────────────
+    # ── TTK Style ─────────────────────────────────────────────
 
     def _apply_style(self):
         s = ttk.Style()
         s.theme_use("clam")
-        s.configure("TNotebook",       background="#1e1e2e", borderwidth=0)
-        s.configure("TNotebook.Tab",   background="#313244", foreground="#cdd6f4",
-                                       padding=[14, 6], font=("Consolas", 10))
-        s.map("TNotebook.Tab",         background=[("selected", "#89b4fa")],
-                                       foreground=[("selected", "#1e1e2e")])
-        s.configure("TFrame",          background="#1e1e2e")
-        s.configure("TLabel",          background="#1e1e2e", foreground="#cdd6f4",
-                                       font=("Consolas", 10))
-        s.configure("TEntry",          fieldbackground="#313244", foreground="#cdd6f4",
-                                       insertcolor="#cdd6f4", font=("Consolas", 10))
-        s.configure("TCheckbutton",    background="#1e1e2e", foreground="#cdd6f4",
-                                       font=("Consolas", 10))
-        s.map("TCheckbutton",          background=[("active", "#1e1e2e")])
-        s.configure("TScrollbar",      background="#313244", troughcolor="#1e1e2e",
-                                       arrowcolor="#cdd6f4")
-        s.configure("Sep.TFrame",      background="#313244")
+        s.configure("TFrame",       background=BASE)
+        s.configure("TLabel",       background=BASE, foreground=TEXT, font=FONT_UI)
+        s.configure("TEntry",       fieldbackground=SURF0, foreground=TEXT,
+                                    insertcolor=TEXT, font=("Consolas", 10), borderwidth=0)
+        s.configure("TCheckbutton", background=BASE, foreground=TEXT, font=FONT_UI)
+        s.map("TCheckbutton",       background=[("active", BASE)])
+        s.configure("TScrollbar",   background=SURF0, troughcolor=BASE,
+                                    arrowcolor=DIM, borderwidth=0)
 
-    # ──────────────────────────────────────────
-    #  UI AUFBAU
-    # ──────────────────────────────────────────
+    # ── Build UI ──────────────────────────────────────────────
 
     def _build_ui(self):
-        self._apply_style()
+        self._build_header()
+        self._build_body()
+        self._build_log()
+        self._build_buttons()
 
-        # Header
-        hdr = tk.Frame(self.root, bg="#181825")
+    def _build_header(self):
+        hdr = tk.Frame(self.root, bg=MANTLE)
         hdr.pack(fill="x")
-        tk.Label(hdr, text="  ⚔  Idle Slayer Bot",
-                 bg="#181825", fg="#89b4fa",
-                 font=("Consolas", 13, "bold"), pady=10, anchor="w"
-                 ).pack(side="left")
-        self._status_lbl = tk.Label(hdr, text="● Gestoppt",
-                                    bg="#181825", fg="#f38ba8",
-                                    font=("Consolas", 10), padx=12)
-        self._status_lbl.pack(side="right")
+        tk.Frame(hdr, bg=SURF0, height=1).pack(side="bottom", fill="x")
 
-        # Notebook + Tabs
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=10, pady=(8, 2))
+        inner = tk.Frame(hdr, bg=MANTLE, padx=18, pady=13)
+        inner.pack(fill="x")
 
-        configs = {"bot": self.bot_config,
+        tk.Label(inner, text="⚔  Idle Slayer Bot",
+                 bg=MANTLE, fg=BLUE, font=FONT_HDR).pack(side="left")
+
+        badge = tk.Frame(inner, bg=SURF0, padx=12, pady=5)
+        badge.pack(side="right")
+        self._status_dot = tk.Label(badge, text="●", bg=SURF0, fg=RED,
+                                    font=("Segoe UI", 9))
+        self._status_dot.pack(side="left")
+        self._status_lbl = tk.Label(badge, text="  Gestoppt", bg=SURF0, fg=TEXT,
+                                    font=FONT_UI)
+        self._status_lbl.pack(side="left")
+
+    def _build_body(self):
+        body = tk.Frame(self.root, bg=BASE)
+        body.pack(fill="both", expand=True)
+
+        # Sidebar
+        sidebar = tk.Frame(body, bg=MANTLE, width=175)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
+        tk.Frame(sidebar, bg=MANTLE, height=8).pack()   # top padding
+
+        # Sidebar right border
+        tk.Frame(body, bg=SURF0, width=1).pack(side="left", fill="y")
+
+        # Content area
+        self._content = tk.Frame(body, bg=BASE)
+        self._content.pack(side="left", fill="both", expand=True)
+
+        # Build nav + pages
+        configs = {"bot":   self.bot_config,
                    "chest": self.chest_config,
                    "bonus": self.bonus_config}
 
-        tab_quick = ttk.Frame(notebook)
-        notebook.add(tab_quick, text="🚀  Übersicht")
-        QuickTab(tab_quick, configs, self._entries)
+        self._pages = {}
 
-        for label, section, cfg in [
-            ("🤖  Bot",         "bot",   self.bot_config),
-            ("📦  Chest Hunt",  "chest", self.chest_config),
-            ("⭐  Bonus Stage", "bonus", self.bonus_config),
-        ]:
-            tab = ttk.Frame(notebook)
-            notebook.add(tab, text=label)
-            ConfigTab(tab, section, cfg, self._entries)
+        for key, icon, label in NAV_ITEMS:
+            self._make_nav_item(sidebar, key, icon, label)
 
-        tab_target = ttk.Frame(notebook)
-        notebook.add(tab_target, text="🎯  Targets")
-        self._target_tab = TargetTab(tab_target, self.target_configs)
+        p = tk.Frame(self._content, bg=BASE)
+        QuickTab(p, configs, self._entries)
+        self._pages["quick"] = p
 
-        # Trennlinie + Log
-        ttk.Frame(self.root, style="Sep.TFrame", height=2).pack(
-            fill="x", padx=10, pady=(6, 0))
+        for key, cfg in [("bot",   self.bot_config),
+                          ("chest", self.chest_config),
+                          ("bonus", self.bonus_config)]:
+            p = tk.Frame(self._content, bg=BASE)
+            ConfigTab(p, key, cfg, self._entries)
+            self._pages[key] = p
+
+        p = tk.Frame(self._content, bg=BASE)
+        self._target_tab = TargetTab(p, self.target_configs)
+        self._pages["targets"] = p
+
+        self._show_page("quick")
+
+    def _make_nav_item(self, parent, page_name: str, icon: str, label: str):
+        frame = tk.Frame(parent, bg=MANTLE, cursor="hand2")
+        frame.pack(fill="x")
+
+        accent = tk.Frame(frame, width=3, bg=MANTLE)
+        accent.pack(side="left", fill="y")
+
+        inner = tk.Frame(frame, bg=MANTLE, padx=10, pady=10)
+        inner.pack(fill="x", expand=True)
+
+        lbl = tk.Label(inner, text=f"{icon}  {label}",
+                       bg=MANTLE, fg=DIM, font=FONT_UI, anchor="w")
+        lbl.pack(fill="x")
+
+        self._nav_refs[page_name] = (frame, accent, inner, lbl)
+
+        def on_enter(e):
+            if self._active_page != page_name:
+                for w in (frame, inner): w.config(bg=SURF0)
+                lbl.config(bg=SURF0, fg=TEXT)
+
+        def on_leave(e):
+            if self._active_page != page_name:
+                for w in (frame, inner): w.config(bg=MANTLE)
+                lbl.config(bg=MANTLE, fg=DIM)
+
+        def on_click(e):
+            self._show_page(page_name)
+
+        for w in (frame, accent, inner, lbl):
+            w.bind("<Enter>",    on_enter)
+            w.bind("<Leave>",    on_leave)
+            w.bind("<Button-1>", on_click)
+
+    def _show_page(self, page_name: str):
+        if self._active_page and self._active_page in self._nav_refs:
+            frame, accent, inner, lbl = self._nav_refs[self._active_page]
+            for w in (frame, inner): w.config(bg=MANTLE)
+            accent.config(bg=MANTLE)
+            lbl.config(bg=MANTLE, fg=DIM)
+            if self._active_page in self._pages:
+                self._pages[self._active_page].pack_forget()
+
+        self._active_page = page_name
+        frame, accent, inner, lbl = self._nav_refs[page_name]
+        for w in (frame, inner): w.config(bg=SURF0)
+        accent.config(bg=BLUE)
+        lbl.config(bg=SURF0, fg=BLUE)
+
+        if page_name in self._pages:
+            self._pages[page_name].pack(fill="both", expand=True)
+
+    def _build_log(self):
+        tk.Frame(self.root, bg=SURF0, height=1).pack(fill="x")
         self._log_box = LogBox(self.root)
 
-        # Trennlinie + Buttons
-        ttk.Frame(self.root, style="Sep.TFrame", height=2).pack(
-            fill="x", padx=10, pady=(4, 0))
-        self._build_buttons()
-
     def _build_buttons(self):
-        self._btn_frame = tk.Frame(self.root, bg="#181825", pady=8)
-        self._btn_frame.pack(fill="x", padx=10)
+        tk.Frame(self.root, bg=SURF0, height=1).pack(fill="x")
+        bar = tk.Frame(self.root, bg=MANTLE, pady=10, padx=14)
+        bar.pack(fill="x")
 
-        self._btn_start  = self._btn("▶  Starten",  "#a6e3a1", self._on_start)
-        self._btn_pause  = self._btn("⏸  Pause",    "#fab387", self._on_pause)
-        self._btn_resume = self._btn("▶  Weiter",   "#89b4fa", self._on_resume)
-        self._btn_stop   = self._btn("⏹  Beenden",  "#f38ba8", self._on_close)
+        def make_btn(text, color, cmd):
+            lighter = _lighten(color)
+            b = tk.Button(bar, text=text, command=cmd,
+                          bg=color, fg=CRUST,
+                          font=FONT_BOLD, relief="flat",
+                          padx=18, pady=7, cursor="hand2",
+                          activebackground=lighter, activeforeground=CRUST, bd=0)
+            b.bind("<Enter>", lambda e: b.config(bg=lighter))
+            b.bind("<Leave>", lambda e: b.config(bg=color))
+            return b
 
+        self._btn_start  = make_btn("▶  Starten", GREEN,  self._on_start)
+        self._btn_pause  = make_btn("⏸  Pause",   ORANGE, self._on_pause)
+        self._btn_resume = make_btn("▶  Weiter",  BLUE,   self._on_resume)
+        self._btn_stop   = make_btn("⏹  Beenden", RED,    self._on_close)
+
+        self._btn_stop.pack(side="right", padx=(4, 0))
         self._btn_start.pack(side="right", padx=4)
-        self._btn_stop.pack( side="right", padx=4)
         self._btn_pause.pack_forget()
         self._btn_resume.pack_forget()
 
-    def _btn(self, text, color, cmd):
-        return tk.Button(
-            self._btn_frame, text=text, command=cmd,
-            bg=color, fg="#1e1e2e",
-            font=("Consolas", 10, "bold"),
-            relief="flat", padx=16, pady=6,
-            cursor="hand2", activebackground=color, bd=0
-        )
-
-    # ──────────────────────────────────────────
-    #  CONFIG ANWENDEN
-    # ──────────────────────────────────────────
+    # ── Config apply ──────────────────────────────────────────
 
     def _write_fields(self, section: str, config_obj):
         for f in fields(config_obj):
@@ -173,9 +272,7 @@ class ConfigUI:
         self.target_configs = self._target_tab.get_targets()
         self._log_box.log("✅ Konfiguration übernommen.")
 
-    # ──────────────────────────────────────────
-    #  LOG POLLING
-    # ──────────────────────────────────────────
+    # ── Log polling ───────────────────────────────────────────
 
     def _poll_log(self):
         try:
@@ -183,23 +280,23 @@ class ConfigUI:
                 self._log_box.log(self._log_queue.get_nowait())
         except queue.Empty:
             pass
-        # Crash-Queue prüfen (FailSafe o.ä.)
         try:
             while True:
                 kind, msg = self._crash_queue.get_nowait()
                 self._on_bot_crashed(kind, msg)
         except queue.Empty:
             pass
-        # Thread unerwartet beendet?
         if self._running and hasattr(self, "_bot_thread") and not self._bot_thread.is_alive():
             self._on_bot_crashed("THREAD_DEAD", "Bot-Thread unerwartet beendet.")
         self.root.after(100, self._poll_log)
 
-    def _set_status(self, text: str, color: str):
-        self._status_lbl.configure(text=text, fg=color)
+    # ── Status ────────────────────────────────────────────────
+
+    def _set_status(self, text: str, dot_color: str):
+        self._status_dot.configure(fg=dot_color)
+        self._status_lbl.configure(text=f"  {text}")
 
     def _on_bot_crashed(self, kind: str, msg: str):
-        """Wird aufgerufen, wenn der Bot-Thread abstürzt (FailSafe, Exception, etc.)."""
         if not self._running:
             return
         self._running = False
@@ -208,14 +305,12 @@ class ConfigUI:
                               "Bot gestoppt. Option 'disable_failsafe' aktivieren, um zu umgehen.")
         else:
             self._log_box.log(f"❌ Bot abgestürzt: {msg}")
-        self._set_status("● Abgestürzt", "#f38ba8")
+        self._set_status("Abgestürzt", RED)
         self._btn_pause.pack_forget()
         self._btn_resume.pack_forget()
         self._btn_start.pack(side="right", padx=4)
 
-    # ──────────────────────────────────────────
-    #  BUTTON AKTIONEN
-    # ──────────────────────────────────────────
+    # ── Button actions ────────────────────────────────────────
 
     def _on_start(self):
         self._apply_configs_inplace()
@@ -231,7 +326,8 @@ class ConfigUI:
 
         self._bot_thread = threading.Thread(
             target=bot.run,
-            kwargs={"stop_event": self._stop_event, "pause_event": self._pause_event,
+            kwargs={"stop_event":  self._stop_event,
+                    "pause_event": self._pause_event,
                     "crash_queue": self._crash_queue},
             daemon=True
         )
@@ -239,7 +335,7 @@ class ConfigUI:
 
         self._btn_start.pack_forget()
         self._btn_pause.pack(side="right", padx=4)
-        self._set_status("● Läuft", "#a6e3a1")
+        self._set_status("Läuft", GREEN)
         self._log_box.log("Bot gestartet.")
 
     def _on_pause(self):
@@ -249,7 +345,7 @@ class ConfigUI:
             self._log_box.log("⏸ Bot pausiert – Werte können jetzt angepasst werden.")
             self._btn_pause.pack_forget()
             self._btn_resume.pack(side="right", padx=4)
-            self._set_status("● Pausiert", "#fab387")
+            self._set_status("Pausiert", ORANGE)
 
     def _on_resume(self):
         if self._paused:
@@ -259,7 +355,7 @@ class ConfigUI:
             self._log_box.log("▶ Bot fortgesetzt mit neuer Konfiguration.")
             self._btn_resume.pack_forget()
             self._btn_pause.pack(side="right", padx=4)
-            self._set_status("● Läuft", "#a6e3a1")
+            self._set_status("Läuft", GREEN)
 
     def _on_close(self):
         if self._running:

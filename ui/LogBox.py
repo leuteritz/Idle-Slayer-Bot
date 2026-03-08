@@ -2,11 +2,30 @@ import io
 import queue
 import time
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, ttk
+
+BASE   = "#1e1e2e"
+MANTLE = "#181825"
+CRUST  = "#11111b"
+SURF0  = "#313244"
+TEXT   = "#cdd6f4"
+DIM    = "#45475a"
+BLUE   = "#89b4fa"
+GREEN  = "#a6e3a1"
+ORANGE = "#fab387"
+RED    = "#f38ba8"
+
+FONT_UI   = ("Segoe UI", 10)
+FONT_BOLD = ("Segoe UI", 10, "bold")
+
+
+def _lighten(hex_color: str, amount: int = 20) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"#{min(255, r+amount):02x}{min(255, g+amount):02x}{min(255, b+amount):02x}"
 
 
 class QueueStream(io.TextIOBase):
-    """Leitet print()-Aufrufe in eine Queue um."""
     def __init__(self, log_queue: queue.Queue):
         self._queue = log_queue
 
@@ -20,31 +39,46 @@ class QueueStream(io.TextIOBase):
 
 
 class LogBox:
-    """ScrolledText-Widget mit farbigem Log und Timestamp."""
-
     def __init__(self, parent):
-        outer = tk.Frame(parent, bg="#1e1e2e")
-        outer.pack(fill="both", expand=True, padx=10, pady=(4, 0))
+        outer = tk.Frame(parent, bg=BASE)
+        outer.pack(fill="both", expand=True, padx=0, pady=0)
 
-        tk.Label(outer, text="📋  Log", bg="#1e1e2e", fg="#89b4fa",
-                 font=("Consolas", 10, "bold"), anchor="w"
-                 ).pack(fill="x")
+        # Header bar
+        hdr = tk.Frame(outer, bg=MANTLE, padx=16, pady=7)
+        hdr.pack(fill="x")
 
+        tk.Label(hdr, text="📋  Log", bg=MANTLE, fg=BLUE,
+                 font=FONT_BOLD).pack(side="left")
+
+        clr_btn = tk.Button(
+            hdr, text="Leeren",
+            command=self._clear,
+            bg=SURF0, fg=TEXT,
+            font=("Segoe UI", 8), relief="flat",
+            padx=10, pady=3, cursor="hand2",
+            activebackground=_lighten(SURF0), activeforeground=TEXT, bd=0)
+        clr_btn.pack(side="right")
+        clr_btn.bind("<Enter>", lambda e: clr_btn.config(bg=_lighten(SURF0)))
+        clr_btn.bind("<Leave>", lambda e: clr_btn.config(bg=SURF0))
+
+        # Log text
         self._box = scrolledtext.ScrolledText(
-            outer, height=10, width=78,
-            bg="#11111b", fg="#cdd6f4",
+            outer, height=9,
+            bg=CRUST, fg=TEXT,
             font=("Consolas", 9),
             state="disabled", relief="flat", bd=0,
-            insertbackground="#cdd6f4"
+            insertbackground=TEXT,
+            selectbackground=SURF0, selectforeground=TEXT,
+            padx=14, pady=8,
         )
         self._box.pack(fill="both", expand=True)
 
-        self._box.tag_config("info",  foreground="#cdd6f4")
-        self._box.tag_config("good",  foreground="#a6e3a1")
-        self._box.tag_config("warn",  foreground="#fab387")
-        self._box.tag_config("error", foreground="#f38ba8")
-        self._box.tag_config("jump",  foreground="#89b4fa")
-        self._box.tag_config("ts",    foreground="#45475a")
+        self._box.tag_config("info",  foreground=TEXT)
+        self._box.tag_config("good",  foreground=GREEN)
+        self._box.tag_config("warn",  foreground=ORANGE)
+        self._box.tag_config("error", foreground=RED)
+        self._box.tag_config("jump",  foreground=BLUE)
+        self._box.tag_config("ts",    foreground=DIM)
 
     def log(self, text: str):
         self._box.configure(state="normal")
@@ -54,7 +88,7 @@ class LogBox:
             tag = "good"
         elif any(k in tl for k in ["panic", "close", "mimik", "verlassen", "pause", "⏸", "⚠"]):
             tag = "warn"
-        elif any(k in tl for k in ["error", "fehler", "nicht gefunden"]):
+        elif any(k in tl for k in ["error", "fehler", "nicht gefunden", "❌"]):
             tag = "error"
         elif any(k in tl for k in ["sprung", "springe", "jump", "d gedrückt"]):
             tag = "jump"
@@ -63,4 +97,9 @@ class LogBox:
         self._box.insert("end", f"[{ts}] ", "ts")
         self._box.insert("end", f"{text}\n", tag)
         self._box.see("end")
+        self._box.configure(state="disabled")
+
+    def _clear(self):
+        self._box.configure(state="normal")
+        self._box.delete("1.0", "end")
         self._box.configure(state="disabled")
