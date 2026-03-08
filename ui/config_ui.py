@@ -3,7 +3,34 @@ from tkinter import ttk
 import threading
 import queue
 import sys
+import ctypes
+from ctypes import wintypes
 from dataclasses import fields
+import win32con
+
+_WM_HOTKEY  = 0x0312
+_PAUSE_KEY  = win32con.VK_F9   # F9 = Pause/Weiter
+
+
+class _HotkeyThread(threading.Thread):
+    """Globaler Win32-Hotkey-Listener (läuft als Daemon-Thread)."""
+    def __init__(self, callback):
+        super().__init__(daemon=True)
+        self._callback = callback
+        self._tid      = None
+
+    def run(self):
+        self._tid = ctypes.windll.kernel32.GetCurrentThreadId()
+        ctypes.windll.user32.RegisterHotKey(None, 1, win32con.MOD_NOREPEAT, _PAUSE_KEY)
+        msg = wintypes.MSG()
+        while ctypes.windll.user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+            if msg.message == _WM_HOTKEY:
+                self._callback()
+        ctypes.windll.user32.UnregisterHotKey(None, 1)
+
+    def stop(self):
+        if self._tid:
+            ctypes.windll.user32.PostThreadMessageW(self._tid, 0x0012, 0, 0)  # WM_QUIT
 
 from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
 from ui.log_box import LogBox, QueueStream
@@ -63,6 +90,7 @@ class ConfigUI:
         self._entries     = {}
         self._active_page = None
         self._nav_refs    = {}   # page_name -> (frame, accent, inner, lbl)
+        self._hotkey_thread: _HotkeyThread = None
 
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
@@ -243,6 +271,9 @@ class ConfigUI:
         self._btn_pause.pack_forget()
         self._btn_resume.pack_forget()
 
+        tk.Label(bar, text="F9: Pause / Weiter", bg=MANTLE, fg=DIM,
+                 font=("Segoe UI", 8)).pack(side="left", padx=4)
+
     # ── Config apply ──────────────────────────────────────────
 
     def _write_fields(self, section: str, config_obj):
@@ -312,6 +343,12 @@ class ConfigUI:
 
     # ── Button actions ────────────────────────────────────────
 
+    def _toggle_pause(self):
+        """Wird vom globalen Hotkey (F9) aufgerufen – thread-safe via root.after."""
+        if not self._running:
+            return
+        self.root.after(0, self._on_resume if self._paused else self._on_pause)
+
     def _on_start(self):
         self._apply_configs_inplace()
         sys.stdout = QueueStream(self._log_queue)
@@ -319,6 +356,9 @@ class ConfigUI:
         self._stop_event.clear()
         self._pause_event.clear()
         self._running = True
+
+        self._hotkey_thread = _HotkeyThread(self._toggle_pause)
+        self._hotkey_thread.start()
 
         from bot.bot import IdleSlayerBot
         bot = IdleSlayerBot(self.bot_config, self.target_configs,
@@ -358,6 +398,8 @@ class ConfigUI:
             self._set_status("Läuft", GREEN)
 
     def _on_close(self):
+        if self._hotkey_thread:
+            self._hotkey_thread.stop()
         if self._running:
             self._stop_event.set()
             self._log_box.log("⏹ Bot wird beendet...")
