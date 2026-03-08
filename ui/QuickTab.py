@@ -3,6 +3,7 @@ from tkinter import ttk
 
 # (section, field_name, lesbares Label, Beschreibung)
 QUICK_FIELDS = [
+    ("bot",   "disable_failsafe",        "FailSafe deaktivieren",  "Maus in Ecke löst sonst Stop aus"),
     ("bot",   "d_key_interval",          "D-Taste Intervall (s)",  "Alle X Sekunden wird D gedrückt"),
     ("bot",   "cooldown",                "Sprung-Cooldown (s)",    "Mindestpause zwischen zwei Sprüngen"),
     ("bot",   "check_interval",          "Scan-Intervall (s)",     "Wie oft pro Sekunde gescannt wird"),

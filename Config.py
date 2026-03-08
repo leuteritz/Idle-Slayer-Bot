@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class BotConfig:
     game_title:              str   = "Idle Slayer"
+    disable_failsafe:        bool  = False   # PyAutoGUI FailSafe deaktivieren (Maus in Ecke = Stop)
     monitor_index:           int   = 2
     d_key_interval:          float = 4.0
     space_key_interval:      float = 0.3

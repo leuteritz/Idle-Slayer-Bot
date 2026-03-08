@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import mss
 import threading
+import pyautogui
 
 from GameWindow import GameWindow
 from Target import Target
@@ -18,6 +19,8 @@ class IdleSlayerBot:
                  bonus_config: BonusStageConfig):
 
         self.cfg        = bot_config
+        if bot_config.disable_failsafe:
+            pyautogui.FAILSAFE = False
         self.window     = GameWindow(bot_config.game_title)
         self.last_jump  = 0
         self.last_d_key = 0
@@ -67,7 +70,8 @@ class IdleSlayerBot:
                 break
 
     def run(self, stop_event: threading.Event = None,
-                  pause_event: threading.Event = None):
+                  pause_event: threading.Event = None,
+                  crash_queue = None):
         with mss.mss() as sct:
             monitor = sct.monitors[self.cfg.monitor_index]
             try:
@@ -101,5 +105,10 @@ class IdleSlayerBot:
                     self._handle_detection(gray, now)
                     time.sleep(self.cfg.check_interval)
 
+            except pyautogui.FailSafeException as e:
+                msg = f"PyAutoGUI FailSafe ausgelöst – Maus in Bildschirmecke. Bot gestoppt."
+                print(msg)
+                if crash_queue is not None:
+                    crash_queue.put(("FAILSAFE", str(e)))
             except KeyboardInterrupt:
                 print("Skript beendet.")

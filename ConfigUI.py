@@ -24,6 +24,7 @@ class ConfigUI:
         self.target_configs = list(target_configs)
 
         self._log_queue   = queue.Queue()
+        self._crash_queue = queue.Queue()
         self._stop_event  = threading.Event()
         self._pause_event = threading.Event()
         self._running     = False
@@ -182,10 +183,35 @@ class ConfigUI:
                 self._log_box.log(self._log_queue.get_nowait())
         except queue.Empty:
             pass
+        # Crash-Queue prüfen (FailSafe o.ä.)
+        try:
+            while True:
+                kind, msg = self._crash_queue.get_nowait()
+                self._on_bot_crashed(kind, msg)
+        except queue.Empty:
+            pass
+        # Thread unerwartet beendet?
+        if self._running and hasattr(self, "_bot_thread") and not self._bot_thread.is_alive():
+            self._on_bot_crashed("THREAD_DEAD", "Bot-Thread unerwartet beendet.")
         self.root.after(100, self._poll_log)
 
     def _set_status(self, text: str, color: str):
         self._status_lbl.configure(text=text, fg=color)
+
+    def _on_bot_crashed(self, kind: str, msg: str):
+        """Wird aufgerufen, wenn der Bot-Thread abstürzt (FailSafe, Exception, etc.)."""
+        if not self._running:
+            return
+        self._running = False
+        if kind == "FAILSAFE":
+            self._log_box.log("❌ PyAutoGUI FailSafe ausgelöst – Maus in Bildschirmecke! "
+                              "Bot gestoppt. Option 'disable_failsafe' aktivieren, um zu umgehen.")
+        else:
+            self._log_box.log(f"❌ Bot abgestürzt: {msg}")
+        self._set_status("● Abgestürzt", "#f38ba8")
+        self._btn_pause.pack_forget()
+        self._btn_resume.pack_forget()
+        self._btn_start.pack(side="right", padx=4)
 
     # ──────────────────────────────────────────
     #  BUTTON AKTIONEN
@@ -205,7 +231,8 @@ class ConfigUI:
 
         self._bot_thread = threading.Thread(
             target=bot.run,
-            kwargs={"stop_event": self._stop_event, "pause_event": self._pause_event},
+            kwargs={"stop_event": self._stop_event, "pause_event": self._pause_event,
+                    "crash_queue": self._crash_queue},
             daemon=True
         )
         self._bot_thread.start()
