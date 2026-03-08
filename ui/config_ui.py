@@ -5,11 +5,11 @@ import queue
 import sys
 from dataclasses import fields
 
-from Config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
-from ui.LogBox import LogBox, QueueStream
-from ui.QuickTab import QuickTab
-from ui.ConfigTab import ConfigTab
-from ui.TargetTab import TargetTab
+from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
+from ui.log_box import LogBox, QueueStream
+from ui.quick_tab import QuickTab
+from ui.config_tab import ConfigTab
+from ui.target_tab import TargetTab
 
 # ── Catppuccin Mocha ──────────────────────────────────────────
 BASE   = "#1e1e2e"
@@ -320,7 +320,7 @@ class ConfigUI:
         self._pause_event.clear()
         self._running = True
 
-        from Bot import IdleSlayerBot
+        from bot.bot import IdleSlayerBot
         bot = IdleSlayerBot(self.bot_config, self.target_configs,
                             self.chest_config, self.bonus_config)
 

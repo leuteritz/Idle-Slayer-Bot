@@ -2,14 +2,14 @@ import cv2
 import numpy as np
 import os
 
-BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
-ENEMIES_DIR = os.path.join(BASE_DIR, "enemies")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENEMIES_DIR   = os.path.join(_PROJECT_ROOT, "assets", "enemies")
 
 
 class TemplateMatcher:
 
     def _load_template(self, filename: str, assets_dir: str = None) -> np.ndarray:
-        """Lädt ein Template. Nutzt assets_dir falls angegeben, sonst enemies/."""
+        """Lädt ein Template. Nutzt assets_dir falls angegeben, sonst assets/enemies/."""
         directory = assets_dir if assets_dir else ENEMIES_DIR
         path      = os.path.join(directory, filename)
         image     = cv2.imread(path, cv2.IMREAD_GRAYSCALE)

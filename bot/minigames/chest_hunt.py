@@ -5,10 +5,11 @@ import mss
 import os
 import threading
 
-from TemplateMatcher import TemplateMatcher
-from Config import ChestHuntConfig
+from bot.template_matcher import TemplateMatcher
+from bot.config import ChestHuntConfig
 
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ASSETS_DIR    = os.path.join(_PROJECT_ROOT, "assets", "minigames")
 
 
 class ChestHunt(TemplateMatcher):

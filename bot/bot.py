@@ -5,11 +5,11 @@ import mss
 import threading
 import pyautogui
 
-from GameWindow import GameWindow
-from Target import Target
-from minigames.ChestHunt import ChestHunt
-from minigames.BonusStage import BonusStage
-from Config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
+from bot.game_window import GameWindow
+from bot.target import Target
+from bot.minigames.chest_hunt import ChestHunt
+from bot.minigames.bonus_stage import BonusStage
+from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
 
 
 class IdleSlayerBot:

@@ -1,6 +1,6 @@
-from Bot import IdleSlayerBot
-from Config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
-from ConfigUI import ConfigUI
+from bot.bot import IdleSlayerBot
+from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
+from ui.config_ui import ConfigUI
 
 bot_config = BotConfig(
     game_title              = "Idle Slayer",

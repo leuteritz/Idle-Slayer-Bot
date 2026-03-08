@@ -1,5 +1,5 @@
 import numpy as np
-from TemplateMatcher import TemplateMatcher
+from bot.template_matcher import TemplateMatcher
 
 
 class Target(TemplateMatcher):

@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from Config import TargetConfig
+from bot.config import TargetConfig
 
 BASE   = "#1e1e2e"
 MANTLE = "#181825"
