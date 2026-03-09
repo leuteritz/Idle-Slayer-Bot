@@ -37,6 +37,7 @@ from ui.log_box import LogBox, QueueStream
 from ui.quick_tab import QuickTab
 from ui.config_tab import ConfigTab
 from ui.target_tab import TargetTab
+from ui.sp_scanner_tab import SpScannerTab
 
 # ── Catppuccin Mocha ──────────────────────────────────────────
 BASE   = "#1e1e2e"
@@ -61,6 +62,7 @@ NAV_ITEMS = [
     ("chest",   "📦", "Chest Hunt"),
     ("bonus",   "⭐", "Bonus Stage"),
     ("targets", "🎯", "Targets"),
+    ("scanner", "📊", "SP Scanner"),
 ]
 
 
@@ -91,6 +93,7 @@ class ConfigUI:
         self._active_page = None
         self._nav_refs    = {}   # page_name -> (frame, accent, inner, lbl)
         self._hotkey_thread: _HotkeyThread = None
+        self._sp_data  = {"value": None}
 
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
@@ -145,6 +148,12 @@ class ConfigUI:
                                     font=FONT_UI)
         self._status_lbl.pack(side="left")
 
+        sp_badge = tk.Frame(inner, bg=SURF0, padx=12, pady=5)
+        sp_badge.pack(side="right", padx=(0, 8))
+        self._sp_label = tk.Label(sp_badge, text="SP: ---", bg=SURF0,
+                                  fg=TEXT, font=FONT_UI)
+        self._sp_label.pack()
+
     def _build_body(self):
         body = tk.Frame(self.root, bg=BASE)
         body.pack(fill="both", expand=True)
@@ -186,6 +195,12 @@ class ConfigUI:
         p = tk.Frame(self._content, bg=BASE)
         self._target_tab = TargetTab(p, self.target_configs)
         self._pages["targets"] = p
+
+        p = tk.Frame(self._content, bg=BASE)
+        self._sp_scanner_tab = SpScannerTab(
+            p, self.bot_config.game_title, self._sp_data,
+            log_fn=self._log_queue.put)
+        self._pages["scanner"] = p
 
         self._show_page("quick")
 
@@ -319,6 +334,10 @@ class ConfigUI:
             pass
         if self._running and hasattr(self, "_bot_thread") and not self._bot_thread.is_alive():
             self._on_bot_crashed("THREAD_DEAD", "Bot-Thread unerwartet beendet.")
+        sp = self._sp_data.get("value")
+        if sp is not None:
+            from bot.memory_reader import _format_isp
+            self._sp_label.configure(text=f"SP: {_format_isp(sp)}", fg=GREEN)
         self.root.after(100, self._poll_log)
 
     # ── Status ────────────────────────────────────────────────
@@ -400,6 +419,7 @@ class ConfigUI:
     def _on_close(self):
         if self._hotkey_thread:
             self._hotkey_thread.stop()
+        self._sp_scanner_tab.stop()
         if self._running:
             self._stop_event.set()
             self._log_box.log("⏹ Bot wird beendet...")
