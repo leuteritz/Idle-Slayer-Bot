@@ -2,16 +2,16 @@ import tkinter as tk
 from tkinter import ttk
 from bot.config import TargetConfig
 
-from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, RED, CRUST,
+from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, RED, SEPARATOR,
                       FONT_UI, FONT_BOLD, FONT_HDR_SMALL, lighten, ScrollableFrame)
 
 
 class TargetTab:
     def __init__(self, parent, target_configs: list):
         # Header row
-        hdr = tk.Frame(parent, bg=MANTLE, padx=16, pady=10)
+        hdr = tk.Frame(parent, bg=MANTLE, padx=20, pady=12)
         hdr.pack(fill="x")
-        tk.Frame(hdr, bg=SURF0, height=1).pack(side="bottom", fill="x")
+        tk.Frame(hdr, bg=SEPARATOR, height=1).pack(side="bottom", fill="x")
 
         tk.Label(hdr, text="Dateiname", bg=MANTLE, fg=DIM,
                  font=FONT_HDR_SMALL, width=28, anchor="w").pack(side="left")
@@ -20,9 +20,9 @@ class TargetTab:
         tk.Label(hdr, text="", bg=MANTLE, width=4).pack(side="left")
 
         # Add button — must be packed BEFORE canvas to claim bottom space
-        btn_frame = tk.Frame(parent, bg=MANTLE, pady=10)
+        btn_frame = tk.Frame(parent, bg=MANTLE, pady=12)
         btn_frame.pack(side="bottom", fill="x")
-        tk.Frame(btn_frame, bg=SURF0, height=1).pack(side="top", fill="x")
+        tk.Frame(btn_frame, bg=SEPARATOR, height=1).pack(side="top", fill="x")
 
         sf = ScrollableFrame(parent)
         self._list_frame = sf.inner
@@ -30,11 +30,11 @@ class TargetTab:
         add_btn = tk.Button(
             btn_frame, text="＋  Target hinzufügen",
             command=lambda: self._add_row("", 1),
-            bg=BLUE, fg=CRUST,
+            bg=BLUE, fg=BASE,
             font=FONT_BOLD, relief="flat",
-            padx=16, pady=7, cursor="hand2",
-            activebackground=lighten(BLUE), activeforeground=CRUST, bd=0)
-        add_btn.pack(pady=(8, 2))
+            padx=20, pady=8, cursor="hand2",
+            activebackground=lighten(BLUE), activeforeground=BASE, bd=0)
+        add_btn.pack(pady=(10, 4))
         add_btn.bind("<Enter>", lambda e: add_btn.config(bg=lighten(BLUE)))
         add_btn.bind("<Leave>", lambda e: add_btn.config(bg=BLUE))
 
@@ -47,22 +47,24 @@ class TargetTab:
         fn_var   = tk.StringVar(value=filename)
         prio_var = tk.StringVar(value=str(priority))
 
-        row = tk.Frame(self._list_frame, bg=SURF0 if idx % 2 == 0 else BASE, padx=14, pady=8)
-        row.pack(fill="x", padx=16, pady=2)
+        # Alternating row backgrounds: MANTLE / slightly darker
+        row_bg = MANTLE if idx % 2 == 0 else SURF0
+        row = tk.Frame(self._list_frame, bg=row_bg, padx=16, pady=10)
+        row.pack(fill="x", padx=20, pady=2)
 
         fn_entry = ttk.Entry(row, textvariable=fn_var, width=28)
-        fn_entry.pack(side="left", padx=(0, 8))
+        fn_entry.pack(side="left", padx=(0, 10))
 
         pr_entry = ttk.Entry(row, textvariable=prio_var, width=8)
-        pr_entry.pack(side="left", padx=(0, 8))
+        pr_entry.pack(side="left", padx=(0, 10))
 
         del_btn = tk.Button(
             row, text="✖",
             command=lambda f=fn_var, p=prio_var: self._remove_row(f, p),
-            bg=RED, fg=CRUST,
-            font=("Segoe UI", 9, "bold"), relief="flat",
-            padx=8, pady=4, cursor="hand2",
-            activebackground=lighten(RED), activeforeground=CRUST, bd=0)
+            bg=RED, fg=BASE,
+            font=("SF Pro Display", 10, "bold"), relief="flat",
+            padx=10, pady=5, cursor="hand2",
+            activebackground=lighten(RED), activeforeground=BASE, bd=0)
         del_btn.pack(side="left")
         del_btn.bind("<Enter>", lambda e: del_btn.config(bg=lighten(RED)))
         del_btn.bind("<Leave>", lambda e: del_btn.config(bg=RED))

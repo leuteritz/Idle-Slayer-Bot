@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ui.theme import (BASE, SURF0, TEXT, DIM, BLUE, ORANGE,
-                      FONT_UI, FONT_BOLD, FONT_SMALL, ScrollableFrame)
+from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, ORANGE, SEPARATOR,
+                      FONT_UI, FONT_BOLD, FONT_SMALL, FONT_HDR_SMALL, ScrollableFrame)
 
 # Felder die NACH dem Modus-Selector kommen
 QUICK_FIELDS = [
@@ -46,23 +46,23 @@ class QuickTab:
         # ── Bot Header ───────────────────────────────────────
         hdr_frame = tk.Frame(inner, bg=BASE)
         hdr_frame.grid(row=row, column=0, columnspan=2,
-                       sticky="w", padx=16, pady=(14, 6))
+                       sticky="w", padx=20, pady=(20, 8))
         tk.Label(hdr_frame, text="🤖  Bot",
-                 bg=BASE, fg=BLUE, font=FONT_BOLD).pack(side="left")
+                 bg=BASE, fg=TEXT, font=FONT_HDR_SMALL).pack(side="left")
         row += 1
 
         # ── Modus-Auswahl ────────────────────────────────────
-        mode_card = tk.Frame(inner, bg=SURF0, padx=14, pady=10)
+        mode_card = tk.Frame(inner, bg=MANTLE, padx=16, pady=12)
         mode_card.grid(row=row, column=0, columnspan=2,
-                       sticky="ew", padx=16, pady=2)
+                       sticky="ew", padx=20, pady=2)
         mode_card.bind("<MouseWheel>", sf.scroll_handler)
         row += 1
 
-        label_col = tk.Frame(mode_card, bg=SURF0)
+        label_col = tk.Frame(mode_card, bg=MANTLE)
         label_col.pack(side="left", fill="x", expand=True)
-        tk.Label(label_col, text="W-Taste Modus", bg=SURF0, fg=TEXT,
+        tk.Label(label_col, text="W-Taste Modus", bg=MANTLE, fg=TEXT,
                  font=FONT_UI, anchor="w").pack(anchor="w")
-        tk.Label(label_col, text="Spielmodus für die W-Taste", bg=SURF0, fg=DIM,
+        tk.Label(label_col, text="Spielmodus für die W-Taste", bg=MANTLE, fg=DIM,
                  font=FONT_SMALL, anchor="w").pack(anchor="w")
 
         bot_cfg = configs["bot"]
@@ -72,7 +72,7 @@ class QuickTab:
         else:
             mode_var = entries[("bot", "w_mode")]
 
-        btn_frame = tk.Frame(mode_card, bg=SURF0)
+        btn_frame = tk.Frame(mode_card, bg=MANTLE)
         btn_frame.pack(side="right", padx=(8, 0))
 
         self._mode_var = mode_var
@@ -81,10 +81,10 @@ class QuickTab:
         for val, label in [(1, "CPS-Spam"), (2, "Lang+Kurz")]:
             b = tk.Radiobutton(btn_frame, text=label, variable=mode_var,
                                value=val, command=self._on_mode_change,
-                               bg=SURF0, fg=TEXT, selectcolor=SURF0,
-                               activebackground=SURF0, activeforeground=ORANGE,
+                               bg=MANTLE, fg=TEXT, selectcolor=SURF0,
+                               activebackground=MANTLE, activeforeground=BLUE,
                                font=FONT_UI, indicatoron=False,
-                               padx=10, pady=4, relief="flat", bd=1,
+                               padx=12, pady=5, relief="flat", bd=0,
                                highlightthickness=0)
             b.pack(side="left", padx=2)
             self._mode_btns.append(b)
@@ -105,17 +105,18 @@ class QuickTab:
             val     = getattr(cfg_obj, field_name)
 
             if section != last_section:
-                tk.Frame(inner, bg=SURF0, height=1).grid(
+                # Section separator
+                tk.Frame(inner, bg=SEPARATOR, height=1).grid(
                     row=row, column=0, columnspan=2,
-                    sticky="ew", padx=16, pady=(2, 10))
+                    sticky="ew", padx=20, pady=(12, 16))
                 row += 1
 
                 icon, name = _SECTION_LABELS[section]
                 hdr_frame = tk.Frame(inner, bg=BASE)
                 hdr_frame.grid(row=row, column=0, columnspan=2,
-                               sticky="w", padx=16, pady=(14, 6))
+                               sticky="w", padx=20, pady=(0, 8))
                 tk.Label(hdr_frame, text=f"{icon}  {name}",
-                         bg=BASE, fg=BLUE, font=FONT_BOLD).pack(side="left")
+                         bg=BASE, fg=TEXT, font=FONT_HDR_SMALL).pack(side="left")
                 row += 1
                 last_section = section
 
@@ -126,15 +127,15 @@ class QuickTab:
             else:
                 var = entries[(section, field_name)]
 
-            card = tk.Frame(inner, bg=SURF0, padx=14, pady=8)
+            card = tk.Frame(inner, bg=MANTLE, padx=16, pady=10)
             card.grid(row=row, column=0, columnspan=2,
-                      sticky="ew", padx=16, pady=2)
+                      sticky="ew", padx=20, pady=2)
 
-            lc = tk.Frame(card, bg=SURF0)
+            lc = tk.Frame(card, bg=MANTLE)
             lc.pack(side="left", fill="x", expand=True)
-            tk.Label(lc, text=label, bg=SURF0, fg=TEXT,
+            tk.Label(lc, text=label, bg=MANTLE, fg=TEXT,
                      font=FONT_UI, anchor="w").pack(anchor="w")
-            tk.Label(lc, text=desc, bg=SURF0, fg=DIM,
+            tk.Label(lc, text=desc, bg=MANTLE, fg=DIM,
                      font=FONT_SMALL, anchor="w").pack(anchor="w")
 
             if isinstance(val, bool):
@@ -146,7 +147,7 @@ class QuickTab:
             lc.bind("<MouseWheel>", sf.scroll_handler)
             row += 1
 
-        tk.Frame(inner, bg=BASE, height=12).grid(row=row, column=0, columnspan=2)
+        tk.Frame(inner, bg=BASE, height=16).grid(row=row, column=0, columnspan=2)
 
     def _build_mode_fields(self):
         for w in self._mode_frame.winfo_children():
@@ -165,14 +166,14 @@ class QuickTab:
             else:
                 var = self._entries[(section, field_name)]
 
-            card = tk.Frame(self._mode_frame, bg=SURF0, padx=14, pady=8)
-            card.pack(fill="x", padx=16, pady=2)
+            card = tk.Frame(self._mode_frame, bg=MANTLE, padx=16, pady=10)
+            card.pack(fill="x", padx=20, pady=2)
 
-            lc = tk.Frame(card, bg=SURF0)
+            lc = tk.Frame(card, bg=MANTLE)
             lc.pack(side="left", fill="x", expand=True)
-            tk.Label(lc, text=label, bg=SURF0, fg=TEXT,
+            tk.Label(lc, text=label, bg=MANTLE, fg=TEXT,
                      font=FONT_UI, anchor="w").pack(anchor="w")
-            tk.Label(lc, text=desc, bg=SURF0, fg=DIM,
+            tk.Label(lc, text=desc, bg=MANTLE, fg=DIM,
                      font=FONT_SMALL, anchor="w").pack(anchor="w")
 
             ttk.Entry(card, textvariable=var, width=10).pack(side="right", padx=(8, 0))

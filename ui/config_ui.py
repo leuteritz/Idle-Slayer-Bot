@@ -38,8 +38,8 @@ from ui.quick_tab import QuickTab
 from ui.config_tab import ConfigTab
 from ui.sp_scanner_tab import SpScannerTab
 from ui.theme import (BASE, MANTLE, CRUST, SURF0, SURF1, TEXT, DIM,
-                      BLUE, GREEN, ORANGE, RED,
-                      FONT_UI, FONT_BOLD, FONT_HDR, lighten)
+                      BLUE, GREEN, ORANGE, RED, SEPARATOR, TINT_DIM,
+                      FONT_UI, FONT_BOLD, FONT_HDR, FONT_SMALL, lighten)
 
 NAV_ITEMS = [
     ("quick",   "🚀", "Übersicht"),
@@ -67,14 +67,14 @@ class ConfigUI:
         self._paused      = False
         self._entries     = {}
         self._active_page = None
-        self._nav_refs    = {}   # page_name -> (frame, accent, inner, lbl)
+        self._nav_refs    = {}   # page_name -> (frame, inner, lbl)
         self._hotkey_thread: _HotkeyThread = None
         self._sp_data  = {"value": None}
 
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
         self.root.resizable(True, True)
-        self.root.minsize(700, 740)
+        self.root.minsize(800, 780)
         self.root.configure(bg=BASE)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -90,10 +90,10 @@ class ConfigUI:
         s.configure("TFrame",       background=BASE)
         s.configure("TLabel",       background=BASE, foreground=TEXT, font=FONT_UI)
         s.configure("TEntry",       fieldbackground=SURF0, foreground=TEXT,
-                                    insertcolor=TEXT, font=("Consolas", 10), borderwidth=0)
+                                    insertcolor=TEXT, font=("SF Mono", 12), borderwidth=0)
         s.configure("TCheckbutton", background=BASE, foreground=TEXT, font=FONT_UI)
         s.map("TCheckbutton",       background=[("active", BASE)])
-        s.configure("TScrollbar",   background=SURF0, troughcolor=BASE,
+        s.configure("TScrollbar",   background=SURF1, troughcolor=MANTLE,
                                     arrowcolor=DIM, borderwidth=0)
 
     # ── Build UI ──────────────────────────────────────────────
@@ -107,41 +107,43 @@ class ConfigUI:
     def _build_header(self):
         hdr = tk.Frame(self.root, bg=MANTLE)
         hdr.pack(fill="x")
-        tk.Frame(hdr, bg=SURF0, height=1).pack(side="bottom", fill="x")
+        tk.Frame(hdr, bg=SEPARATOR, height=1).pack(side="bottom", fill="x")
 
-        inner = tk.Frame(hdr, bg=MANTLE, padx=18, pady=13)
+        inner = tk.Frame(hdr, bg=MANTLE, padx=24, pady=16)
         inner.pack(fill="x")
 
-        tk.Label(inner, text="⚔  Idle Slayer Bot",
-                 bg=MANTLE, fg=BLUE, font=FONT_HDR).pack(side="left")
+        tk.Label(inner, text="Idle Slayer Bot",
+                 bg=MANTLE, fg=TEXT, font=FONT_HDR).pack(side="left")
 
-        badge = tk.Frame(inner, bg=SURF0, padx=12, pady=5)
+        # Status pill
+        badge = tk.Frame(inner, bg=SURF0, padx=14, pady=6)
         badge.pack(side="right")
         self._status_dot = tk.Label(badge, text="●", bg=SURF0, fg=RED,
-                                    font=("Segoe UI", 9))
+                                    font=("SF Pro Display", 10))
         self._status_dot.pack(side="left")
-        self._status_lbl = tk.Label(badge, text="  Gestoppt", bg=SURF0, fg=TEXT,
+        self._status_lbl = tk.Label(badge, text="  Gestoppt", bg=SURF0, fg=DIM,
                                     font=FONT_UI)
         self._status_lbl.pack(side="left")
 
-        sp_badge = tk.Frame(inner, bg=SURF0, padx=12, pady=5)
-        sp_badge.pack(side="right", padx=(0, 8))
+        # SP pill
+        sp_badge = tk.Frame(inner, bg=SURF0, padx=14, pady=6)
+        sp_badge.pack(side="right", padx=(0, 10))
         self._sp_label = tk.Label(sp_badge, text="SP: ---", bg=SURF0,
-                                  fg=TEXT, font=FONT_UI)
+                                  fg=DIM, font=FONT_UI)
         self._sp_label.pack()
 
     def _build_body(self):
         body = tk.Frame(self.root, bg=BASE)
         body.pack(fill="both", expand=True)
 
-        # Sidebar
-        sidebar = tk.Frame(body, bg=MANTLE, width=175)
+        # Sidebar — 220px, Apple-style grouped nav
+        sidebar = tk.Frame(body, bg=MANTLE, width=220)
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
-        tk.Frame(sidebar, bg=MANTLE, height=8).pack()   # top padding
+        tk.Frame(sidebar, bg=MANTLE, height=12).pack()   # top padding
 
         # Sidebar right border
-        tk.Frame(body, bg=SURF0, width=1).pack(side="left", fill="y")
+        tk.Frame(body, bg=SEPARATOR, width=1).pack(side="left", fill="y")
 
         # Content area
         self._content = tk.Frame(body, bg=BASE)
@@ -177,20 +179,18 @@ class ConfigUI:
         self._show_page("quick")
 
     def _make_nav_item(self, parent, page_name: str, icon: str, label: str):
+        # Apple-style nav: pill-shaped highlight on active, no accent bar
         frame = tk.Frame(parent, bg=MANTLE, cursor="hand2")
-        frame.pack(fill="x")
+        frame.pack(fill="x", padx=10, pady=1)
 
-        accent = tk.Frame(frame, width=3, bg=MANTLE)
-        accent.pack(side="left", fill="y")
-
-        inner = tk.Frame(frame, bg=MANTLE, padx=10, pady=10)
-        inner.pack(fill="x", expand=True)
+        inner = tk.Frame(frame, bg=MANTLE, padx=14, pady=10)
+        inner.pack(fill="x")
 
         lbl = tk.Label(inner, text=f"{icon}  {label}",
                        bg=MANTLE, fg=DIM, font=FONT_UI, anchor="w")
         lbl.pack(fill="x")
 
-        self._nav_refs[page_name] = (frame, accent, inner, lbl)
+        self._nav_refs[page_name] = (frame, inner, lbl)
 
         def on_enter(e):
             if self._active_page != page_name:
@@ -205,45 +205,44 @@ class ConfigUI:
         def on_click(e):
             self._show_page(page_name)
 
-        for w in (frame, accent, inner, lbl):
+        for w in (frame, inner, lbl):
             w.bind("<Enter>",    on_enter)
             w.bind("<Leave>",    on_leave)
             w.bind("<Button-1>", on_click)
 
     def _show_page(self, page_name: str):
         if self._active_page and self._active_page in self._nav_refs:
-            frame, accent, inner, lbl = self._nav_refs[self._active_page]
+            frame, inner, lbl = self._nav_refs[self._active_page]
             for w in (frame, inner): w.config(bg=MANTLE)
-            accent.config(bg=MANTLE)
             lbl.config(bg=MANTLE, fg=DIM)
             if self._active_page in self._pages:
                 self._pages[self._active_page].pack_forget()
 
         self._active_page = page_name
-        frame, accent, inner, lbl = self._nav_refs[page_name]
+        frame, inner, lbl = self._nav_refs[page_name]
+        # Apple-style: subtle fill + blue text for active nav item
         for w in (frame, inner): w.config(bg=SURF0)
-        accent.config(bg=BLUE)
         lbl.config(bg=SURF0, fg=BLUE)
 
         if page_name in self._pages:
             self._pages[page_name].pack(fill="both", expand=True)
 
     def _build_log(self):
-        tk.Frame(self.root, bg=SURF0, height=1).pack(fill="x")
+        tk.Frame(self.root, bg=SEPARATOR, height=1).pack(fill="x")
         self._log_box = LogBox(self.root)
 
     def _build_buttons(self):
-        tk.Frame(self.root, bg=SURF0, height=1).pack(fill="x")
-        bar = tk.Frame(self.root, bg=MANTLE, pady=10, padx=14)
+        tk.Frame(self.root, bg=SEPARATOR, height=1).pack(fill="x")
+        bar = tk.Frame(self.root, bg=MANTLE, pady=12, padx=20)
         bar.pack(fill="x")
 
         def make_btn(text, color, cmd):
             lighter = lighten(color)
             b = tk.Button(bar, text=text, command=cmd,
-                          bg=color, fg=CRUST,
+                          bg=color, fg=BASE,
                           font=FONT_BOLD, relief="flat",
-                          padx=18, pady=7, cursor="hand2",
-                          activebackground=lighter, activeforeground=CRUST, bd=0)
+                          padx=22, pady=8, cursor="hand2",
+                          activebackground=lighter, activeforeground=BASE, bd=0)
             b.bind("<Enter>", lambda e: b.config(bg=lighter))
             b.bind("<Leave>", lambda e: b.config(bg=color))
             return b
@@ -253,13 +252,13 @@ class ConfigUI:
         self._btn_resume = make_btn("▶  Weiter",  BLUE,   self._on_resume)
         self._btn_stop   = make_btn("⏹  Beenden", RED,    self._on_close)
 
-        self._btn_stop.pack(side="right", padx=(4, 0))
-        self._btn_start.pack(side="right", padx=4)
+        self._btn_stop.pack(side="right", padx=(6, 0))
+        self._btn_start.pack(side="right", padx=6)
         self._btn_pause.pack_forget()
         self._btn_resume.pack_forget()
 
-        tk.Label(bar, text="F9: Pause / Weiter", bg=MANTLE, fg=DIM,
-                 font=("Segoe UI", 8)).pack(side="left", padx=4)
+        tk.Label(bar, text="F9: Pause / Weiter", bg=MANTLE, fg=TINT_DIM,
+                 font=FONT_SMALL).pack(side="left", padx=4)
 
     # ── Config apply ──────────────────────────────────────────
 
@@ -329,7 +328,7 @@ class ConfigUI:
         self._set_status("Abgestürzt", RED)
         self._btn_pause.pack_forget()
         self._btn_resume.pack_forget()
-        self._btn_start.pack(side="right", padx=4)
+        self._btn_start.pack(side="right", padx=6)
 
     # ── Button actions ────────────────────────────────────────
 
@@ -364,7 +363,7 @@ class ConfigUI:
         self._bot_thread.start()
 
         self._btn_start.pack_forget()
-        self._btn_pause.pack(side="right", padx=4)
+        self._btn_pause.pack(side="right", padx=6)
         self._set_status("Läuft", GREEN)
         self._log_box.log("Bot gestartet.")
 
@@ -374,7 +373,7 @@ class ConfigUI:
             self._paused = True
             self._log_box.log("⏸ Bot pausiert – Werte können jetzt angepasst werden.")
             self._btn_pause.pack_forget()
-            self._btn_resume.pack(side="right", padx=4)
+            self._btn_resume.pack(side="right", padx=6)
             self._set_status("Pausiert", ORANGE)
 
     def _on_resume(self):
@@ -384,7 +383,7 @@ class ConfigUI:
             self._paused = False
             self._log_box.log("▶ Bot fortgesetzt mit neuer Konfiguration.")
             self._btn_resume.pack_forget()
-            self._btn_pause.pack(side="right", padx=4)
+            self._btn_pause.pack(side="right", padx=6)
             self._set_status("Läuft", GREEN)
 
     def _on_close(self):

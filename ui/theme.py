@@ -1,28 +1,37 @@
-# ── Catppuccin Mocha ──────────────────────────────────────────
-BASE   = "#1e1e2e"
-MANTLE = "#181825"
-CRUST  = "#11111b"
-SURF0  = "#313244"
-SURF1  = "#45475a"
-TEXT   = "#cdd6f4"
-DIM    = "#6c7086"
-BLUE   = "#89b4fa"
-GREEN  = "#a6e3a1"
-ORANGE = "#fab387"
-RED    = "#f38ba8"
-YELLOW = "#f9e2af"
-MAUVE  = "#cba6f7"
+# ── Apple HIG Dark Mode ──────────────────────────────────────
+BASE   = "#000000"       # systemBackground (dark)
+MANTLE = "#1C1C1E"       # secondarySystemBackground
+CRUST  = "#1C1C1E"       # tertiarySystemBackground (cards)
+SURF0  = "#2C2C2E"       # tertiarySystemBackground (inputs)
+SURF1  = "#3A3A3C"       # quaternarySystemFill
+TEXT   = "#FFFFFF"       # label
+DIM    = "#8E8E93"       # secondaryLabel
+BLUE   = "#0A84FF"       # systemBlue
+GREEN  = "#30D158"       # systemGreen
+ORANGE = "#FF9F0A"       # systemOrange
+RED    = "#FF453A"       # systemRed
+YELLOW = "#FFD60A"       # systemYellow
+MAUVE  = "#BF5AF2"       # systemPurple
 
-# ── Fonts ─────────────────────────────────────────────────────
-FONT_UI    = ("Segoe UI", 10)
-FONT_BOLD  = ("Segoe UI", 10, "bold")
-FONT_HDR       = ("Segoe UI", 13, "bold")
-FONT_HDR_SMALL = ("Segoe UI", 9, "bold")
-FONT_SMALL = ("Segoe UI", 8)
-FONT_MONO  = ("Consolas", 9)
-FONT_LABEL = ("Segoe UI", 8)
-FONT_MED   = ("Segoe UI", 13, "bold")
-FONT_BIG   = ("Segoe UI", 22, "bold")
+# Additional Apple HIG colors
+SEPARATOR = "#38383A"    # separator (dark)
+TINT_DIM  = "#636366"    # tertiaryLabel
+
+# ── Fonts (SF Pro stack with fallbacks) ──────────────────────
+_FONT_FAMILY    = "SF Pro Display"
+_FONT_FALLBACK  = "Segoe UI"
+_FONT_MONO_FAM  = "SF Mono"
+_FONT_MONO_FB   = "Consolas"
+
+FONT_UI        = (_FONT_FAMILY, 13)
+FONT_BOLD      = (_FONT_FAMILY, 13, "bold")
+FONT_HDR       = (_FONT_FAMILY, 20, "bold")          # Large Title
+FONT_HDR_SMALL = (_FONT_FAMILY, 11, "bold")          # Subheadline
+FONT_SMALL     = (_FONT_FAMILY, 11)                  # Caption 1
+FONT_MONO      = (_FONT_MONO_FAM, 11)                # Monospaced
+FONT_LABEL     = (_FONT_FAMILY, 9)                   # Caption 2
+FONT_MED       = (_FONT_FAMILY, 15, "bold")          # Title 3
+FONT_BIG       = (_FONT_FAMILY, 28, "bold")          # Large display
 
 
 def lighten(hex_color: str, amount: int = 20) -> str:

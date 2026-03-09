@@ -4,9 +4,10 @@ import threading
 import time
 
 from bot.memory_reader import format_sp
-from ui.theme import (BASE, SURF0, TEXT, DIM, BLUE, GREEN, RED, ORANGE, YELLOW, MAUVE,
+from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, GREEN, RED, ORANGE,
+                      YELLOW, MAUVE, SEPARATOR,
                       FONT_UI, FONT_BOLD, FONT_SMALL, FONT_LABEL, FONT_MED, FONT_BIG,
-                      ScrollableFrame)
+                      lighten, ScrollableFrame)
 
 
 def _fmt_duration(seconds: float) -> str:
@@ -47,64 +48,70 @@ class SpScannerTab:
 
         # ── Header ──────────────────────────────────────────────────────────
         hdr = tk.Frame(self._inner, bg=BASE)
-        hdr.pack(fill="x", padx=16, pady=(14, 6))
+        hdr.pack(fill="x", padx=24, pady=(20, 8))
         tk.Label(hdr, text="Slayer Points Scanner",
-                 bg=BASE, fg=BLUE, font=FONT_BOLD).pack(side="left")
+                 bg=BASE, fg=TEXT, font=FONT_BOLD).pack(side="left")
 
         # ── Eingabe ─────────────────────────────────────────────────────────
-        input_card = tk.Frame(self._inner, bg=SURF0, padx=14, pady=10)
-        input_card.pack(fill="x", padx=16, pady=(4, 2))
+        input_card = tk.Frame(self._inner, bg=MANTLE, padx=16, pady=14)
+        input_card.pack(fill="x", padx=24, pady=(4, 2))
 
-        row1 = tk.Frame(input_card, bg=SURF0)
+        row1 = tk.Frame(input_card, bg=MANTLE)
         row1.pack(fill="x", pady=2)
 
-        tk.Label(row1, text="Current SP:", bg=SURF0, fg=TEXT, font=FONT_UI).pack(side="left")
+        tk.Label(row1, text="Current SP:", bg=MANTLE, fg=TEXT, font=FONT_UI).pack(side="left")
         self._sp_var = tk.StringVar(value="")
-        ttk.Entry(row1, textvariable=self._sp_var, width=20).pack(side="left", padx=(8, 0))
+        ttk.Entry(row1, textvariable=self._sp_var, width=20).pack(side="left", padx=(10, 0))
 
         tk.Label(input_card, text="Enter your current Slayer Points (e.g. 25.1 M, 500 K, 1.2 B)",
-                 bg=SURF0, fg=DIM, font=FONT_SMALL, anchor="w").pack(anchor="w", pady=(4, 0))
+                 bg=MANTLE, fg=DIM, font=FONT_SMALL, anchor="w").pack(anchor="w", pady=(6, 0))
 
         # ── Buttons ─────────────────────────────────────────────────────────
         btn_frame = tk.Frame(self._inner, bg=BASE)
-        btn_frame.pack(fill="x", padx=16, pady=(8, 4))
+        btn_frame.pack(fill="x", padx=24, pady=(10, 4))
 
         self._btn_scan = tk.Button(
             btn_frame, text="Scan starten", command=self._on_scan,
-            bg=GREEN, fg="#11111b", font=FONT_BOLD, relief="flat",
-            padx=14, pady=6, cursor="hand2")
-        self._btn_scan.pack(side="left", padx=(0, 8))
+            bg=GREEN, fg=BASE, font=FONT_BOLD, relief="flat",
+            padx=18, pady=8, cursor="hand2",
+            activebackground=lighten(GREEN), activeforeground=BASE, bd=0)
+        self._btn_scan.pack(side="left", padx=(0, 10))
+        self._btn_scan.bind("<Enter>", lambda e: self._btn_scan.config(bg=lighten(GREEN)))
+        self._btn_scan.bind("<Leave>", lambda e: self._btn_scan.config(bg=GREEN))
 
         self._btn_stop = tk.Button(
             btn_frame, text="Stop", command=self._on_stop,
-            bg=RED, fg="#11111b", font=FONT_BOLD, relief="flat",
-            padx=14, pady=6, cursor="hand2")
+            bg=RED, fg=BASE, font=FONT_BOLD, relief="flat",
+            padx=18, pady=8, cursor="hand2",
+            activebackground=lighten(RED), activeforeground=BASE, bd=0)
+        self._btn_stop.bind("<Enter>", lambda e: self._btn_stop.config(bg=lighten(RED)))
+        self._btn_stop.bind("<Leave>", lambda e: self._btn_stop.config(bg=RED))
 
         # ── Status ──────────────────────────────────────────────────────────
         self._status_var = tk.StringVar(value="")
         tk.Label(self._inner, textvariable=self._status_var,
                  bg=BASE, fg=DIM, font=FONT_SMALL, anchor="w").pack(
-            fill="x", padx=16, pady=(2, 4))
+            fill="x", padx=24, pady=(4, 6))
 
         # ── Trennlinie ──────────────────────────────────────────────────────
-        tk.Frame(self._inner, bg=SURF0, height=1).pack(fill="x", padx=16, pady=(2, 12))
+        tk.Frame(self._inner, bg=SEPARATOR, height=1).pack(fill="x", padx=24, pady=(4, 16))
 
         # ── Statistik-Dashboard ─────────────────────────────────────────────
         stats = tk.Frame(self._inner, bg=BASE)
-        stats.pack(fill="x", padx=16, pady=(0, 12))
+        stats.pack(fill="x", padx=24, pady=(0, 16))
 
         # Große SP-Karte (volle Breite)
-        big_card = tk.Frame(stats, bg=SURF0, padx=20, pady=14)
-        big_card.pack(fill="x", pady=(0, 8))
+        big_card = tk.Frame(stats, bg=MANTLE, padx=24, pady=18)
+        big_card.pack(fill="x", pady=(0, 10))
         tk.Label(big_card, text="AKTUELLE SLAYER POINTS",
-                 bg=SURF0, fg=DIM, font=FONT_LABEL).pack(anchor="w")
+                 bg=MANTLE, fg=DIM, font=FONT_LABEL).pack(anchor="w")
         self._card_current = tk.StringVar(value="—")
         tk.Label(big_card, textvariable=self._card_current,
-                 bg=SURF0, fg=BLUE, font=FONT_BIG).pack(anchor="w", pady=(4, 0))
+                 bg=MANTLE, fg=BLUE, font=FONT_BIG).pack(anchor="w", pady=(6, 0))
 
         # Zweite Reihe: Farmed + Session-Zeit
         row_a = tk.Frame(stats, bg=BASE)
-        row_a.pack(fill="x", pady=(0, 8))
+        row_a.pack(fill="x", pady=(0, 10))
         row_a.columnconfigure(0, weight=1)
         row_a.columnconfigure(1, weight=1)
 
@@ -113,7 +120,7 @@ class SpScannerTab:
 
         # Dritte Reihe: SP/min + SP/h
         row_b = tk.Frame(stats, bg=BASE)
-        row_b.pack(fill="x", pady=(0, 8))
+        row_b.pack(fill="x", pady=(0, 10))
         row_b.columnconfigure(0, weight=1)
         row_b.columnconfigure(1, weight=1)
 
@@ -121,13 +128,13 @@ class SpScannerTab:
         self._card_per_hour = self._make_card(row_b, "SP / STUNDE",  MAUVE,  1)
 
     def _make_card(self, parent, label: str, color: str, col: int):
-        card = tk.Frame(parent, bg=SURF0, padx=16, pady=12)
+        card = tk.Frame(parent, bg=MANTLE, padx=20, pady=14)
         card.grid(row=0, column=col, sticky="nsew",
-                  padx=(0, 8) if col == 0 else (0, 0))
-        tk.Label(card, text=label, bg=SURF0, fg=DIM, font=FONT_LABEL).pack(anchor="w")
+                  padx=(0, 10) if col == 0 else (0, 0))
+        tk.Label(card, text=label, bg=MANTLE, fg=DIM, font=FONT_LABEL).pack(anchor="w")
         var = tk.StringVar(value="—")
-        tk.Label(card, textvariable=var, bg=SURF0, fg=color,
-                 font=FONT_MED).pack(anchor="w", pady=(4, 0))
+        tk.Label(card, textvariable=var, bg=MANTLE, fg=color,
+                 font=FONT_MED).pack(anchor="w", pady=(6, 0))
         return var
 
     # ---------------------------------------------------------------- Parsing
@@ -166,7 +173,7 @@ class SpScannerTab:
         self._scanning = True
         self._stop_flag.clear()
         self._btn_scan.pack_forget()
-        self._btn_stop.pack(side="left", padx=(0, 8))
+        self._btn_stop.pack(side="left", padx=(0, 10))
 
         self._candidates = []
         self._session_start_time = None
@@ -185,7 +192,7 @@ class SpScannerTab:
         self._scanning = False
         self._sp_data["value"] = None
         self._btn_stop.pack_forget()
-        self._btn_scan.pack(side="left", padx=(0, 8))
+        self._btn_scan.pack(side="left", padx=(0, 10))
         self._set_status("Scan abgebrochen.")
         if self._memory:
             self._memory.close()
@@ -211,7 +218,7 @@ class SpScannerTab:
     def _scan_finished(self):
         self._scanning = False
         self._btn_stop.pack_forget()
-        self._btn_scan.pack(side="left", padx=(0, 8))
+        self._btn_scan.pack(side="left", padx=(0, 10))
 
     def _run_scan(self, sp_min: float, sp_max: float):
         import win32gui

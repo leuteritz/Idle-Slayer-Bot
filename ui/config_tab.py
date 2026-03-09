@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from dataclasses import fields
 
-from ui.theme import BASE, SURF0, TEXT, FONT_UI, ScrollableFrame
+from ui.theme import BASE, MANTLE, TEXT, FONT_UI, ScrollableFrame
 
 # Human-readable labels per field name
 _LABELS = {
@@ -43,16 +43,16 @@ class ConfigTab:
         sf = ScrollableFrame(parent)
         inner = sf.inner
 
-        tk.Frame(inner, bg=BASE, height=10).pack()
+        tk.Frame(inner, bg=BASE, height=14).pack()
 
         for i, f in enumerate(fields(config_obj)):
             val   = getattr(config_obj, f.name)
             label = _LABELS.get(f.name, f.name.replace("_", " ").title())
 
-            card = tk.Frame(inner, bg=SURF0, padx=14, pady=10)
-            card.pack(fill="x", padx=16, pady=3)
+            card = tk.Frame(inner, bg=MANTLE, padx=16, pady=12)
+            card.pack(fill="x", padx=20, pady=2)
 
-            tk.Label(card, text=label, bg=SURF0, fg=TEXT,
+            tk.Label(card, text=label, bg=MANTLE, fg=TEXT,
                      font=FONT_UI, anchor="w", width=28,
                      justify="left").pack(side="left")
 
@@ -70,4 +70,4 @@ class ConfigTab:
 
             card.bind("<MouseWheel>", sf.scroll_handler)
 
-        tk.Frame(inner, bg=BASE, height=12).pack()
+        tk.Frame(inner, bg=BASE, height=16).pack()

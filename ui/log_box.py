@@ -5,8 +5,15 @@ import tkinter as tk
 from tkinter import scrolledtext, ttk
 
 from ui.theme import (BASE, MANTLE, CRUST, SURF0, TEXT, DIM,
-                      BLUE, GREEN, ORANGE, RED,
-                      FONT_UI, FONT_BOLD, FONT_MONO, lighten)
+                      BLUE, GREEN, ORANGE, RED, SEPARATOR, TINT_DIM,
+                      FONT_UI, FONT_BOLD, FONT_SMALL, FONT_MONO, lighten)
+
+# Vivid log colors (slightly brighter than the HIG system colors for readability)
+_LOG_GREEN  = "#32D74B"
+_LOG_ORANGE = "#FFB340"
+_LOG_RED    = "#FF6961"
+_LOG_BLUE   = "#64D2FF"   # systemTeal-ish, pops against dark bg
+_LOG_TS     = "#8E8E93"   # secondaryLabel — readable timestamp
 
 
 class QueueStream(io.TextIOBase):
@@ -28,7 +35,7 @@ class LogBox:
         outer.pack(fill="both", expand=True, padx=0, pady=0)
 
         # Header bar
-        hdr = tk.Frame(outer, bg=MANTLE, padx=16, pady=7)
+        hdr = tk.Frame(outer, bg=MANTLE, padx=20, pady=8)
         hdr.pack(fill="x")
 
         tk.Label(hdr, text="📋  Log", bg=MANTLE, fg=BLUE,
@@ -37,32 +44,33 @@ class LogBox:
         clr_btn = tk.Button(
             hdr, text="Leeren",
             command=self._clear,
-            bg=SURF0, fg=TEXT,
-            font=("Segoe UI", 8), relief="flat",
-            padx=10, pady=3, cursor="hand2",
+            bg=SURF0, fg=DIM,
+            font=FONT_SMALL, relief="flat",
+            padx=12, pady=4, cursor="hand2",
             activebackground=lighten(SURF0), activeforeground=TEXT, bd=0)
         clr_btn.pack(side="right")
-        clr_btn.bind("<Enter>", lambda e: clr_btn.config(bg=lighten(SURF0)))
-        clr_btn.bind("<Leave>", lambda e: clr_btn.config(bg=SURF0))
+        clr_btn.bind("<Enter>", lambda e: clr_btn.config(bg=lighten(SURF0), fg=TEXT))
+        clr_btn.bind("<Leave>", lambda e: clr_btn.config(bg=SURF0, fg=DIM))
 
-        # Log text
+        # Log text — darker background for contrast
         self._box = scrolledtext.ScrolledText(
             outer, height=9,
-            bg=CRUST, fg=TEXT,
+            bg="#0A0A0A", fg="#E5E5EA",
             font=FONT_MONO,
             state="disabled", relief="flat", bd=0,
             insertbackground=TEXT,
             selectbackground=SURF0, selectforeground=TEXT,
-            padx=14, pady=8,
+            padx=16, pady=10,
         )
         self._box.pack(fill="both", expand=True)
 
-        self._box.tag_config("info",  foreground=TEXT)
-        self._box.tag_config("good",  foreground=GREEN)
-        self._box.tag_config("warn",  foreground=ORANGE)
-        self._box.tag_config("error", foreground=RED)
-        self._box.tag_config("jump",  foreground=BLUE)
-        self._box.tag_config("ts",    foreground=DIM)
+        # Bright, vivid tag colors for maximum readability
+        self._box.tag_config("info",  foreground="#E5E5EA")
+        self._box.tag_config("good",  foreground=_LOG_GREEN)
+        self._box.tag_config("warn",  foreground=_LOG_ORANGE)
+        self._box.tag_config("error", foreground=_LOG_RED)
+        self._box.tag_config("jump",  foreground=_LOG_BLUE)
+        self._box.tag_config("ts",    foreground=_LOG_TS)
 
     def log(self, text: str):
         self._box.configure(state="normal")
