@@ -7,6 +7,8 @@ import ctypes
 from ctypes import wintypes
 from dataclasses import fields
 import win32con
+from PIL import Image, ImageTk
+
 
 _WM_HOTKEY  = 0x0312
 _PAUSE_KEY  = win32con.VK_F9   # F9 = Pause/Weiter
@@ -76,6 +78,12 @@ class ConfigUI:
         self.root.resizable(True, True)
         self.root.minsize(800, 780)
         self.root.configure(bg=BASE)
+        # Fenster-Icon (Taskleiste + Titelzeile)
+        try:
+            self._win_icon = tk.PhotoImage(file="assets/icon.png")
+            self.root.iconphoto(True, self._win_icon)
+        except Exception:
+            pass
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._apply_style()
@@ -112,8 +120,17 @@ class ConfigUI:
         inner = tk.Frame(hdr, bg=MANTLE, padx=24, pady=16)
         inner.pack(fill="x")
 
+        # Icon laden und auf 32×32 skalieren
+        try:
+            _pil = Image.open("assets/icon.png").resize((32, 32), Image.LANCZOS)
+            self._header_icon = ImageTk.PhotoImage(_pil)
+            tk.Label(inner, image=self._header_icon,
+                    bg=MANTLE).pack(side="left", padx=(0, 8))
+        except Exception:
+            pass
+
         tk.Label(inner, text="Idle Slayer Bot",
-                 bg=MANTLE, fg=TEXT, font=FONT_HDR).pack(side="left")
+                bg=MANTLE, fg=TEXT, font=FONT_HDR).pack(side="left")
 
         # Status pill
         badge = tk.Frame(inner, bg=SURF0, padx=14, pady=6)
