@@ -32,11 +32,10 @@ class _HotkeyThread(threading.Thread):
         if self._tid:
             ctypes.windll.user32.PostThreadMessageW(self._tid, 0x0012, 0, 0)  # WM_QUIT
 
-from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
+from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig
 from ui.log_box import LogBox, QueueStream
 from ui.quick_tab import QuickTab
 from ui.config_tab import ConfigTab
-from ui.target_tab import TargetTab
 from ui.sp_scanner_tab import SpScannerTab
 from ui.theme import (BASE, MANTLE, CRUST, SURF0, SURF1, TEXT, DIM,
                       BLUE, GREEN, ORANGE, RED,
@@ -47,7 +46,6 @@ NAV_ITEMS = [
     ("bot",     "🤖", "Bot"),
     ("chest",   "📦", "Chest Hunt"),
     ("bonus",   "⭐", "Bonus Stage"),
-    ("targets", "🎯", "Targets"),
     ("scanner", "📊", "SP Scanner"),
 ]
 
@@ -55,13 +53,11 @@ NAV_ITEMS = [
 class ConfigUI:
     def __init__(self, bot_config: BotConfig,
                  chest_config: ChestHuntConfig,
-                 bonus_config: BonusStageConfig,
-                 target_configs: list):
+                 bonus_config: BonusStageConfig):
 
         self.bot_config     = bot_config
         self.chest_config   = chest_config
         self.bonus_config   = bonus_config
-        self.target_configs = list(target_configs)
 
         self._log_queue   = queue.Queue()
         self._crash_queue = queue.Queue()
@@ -171,10 +167,6 @@ class ConfigUI:
             p = tk.Frame(self._content, bg=BASE)
             ConfigTab(p, key, cfg, self._entries)
             self._pages[key] = p
-
-        p = tk.Frame(self._content, bg=BASE)
-        self._target_tab = TargetTab(p, self.target_configs)
-        self._pages["targets"] = p
 
         p = tk.Frame(self._content, bg=BASE)
         self._sp_scanner_tab = SpScannerTab(
@@ -295,7 +287,6 @@ class ConfigUI:
         self._write_fields("bot",   self.bot_config)
         self._write_fields("chest", self.chest_config)
         self._write_fields("bonus", self.bonus_config)
-        self.target_configs = self._target_tab.get_targets()
         self._log_box.log("✅ Konfiguration übernommen.")
 
     # ── Log polling ───────────────────────────────────────────
@@ -360,7 +351,7 @@ class ConfigUI:
         self._hotkey_thread.start()
 
         from bot.bot import IdleSlayerBot
-        bot = IdleSlayerBot(self.bot_config, self.target_configs,
+        bot = IdleSlayerBot(self.bot_config,
                             self.chest_config, self.bonus_config)
 
         self._bot_thread = threading.Thread(

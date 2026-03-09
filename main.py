@@ -1,15 +1,12 @@
-from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
+from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig
 from ui.config_ui import ConfigUI
 
 bot_config = BotConfig(
     game_title              = "Idle Slayer",
     monitor_index           = 2,
     d_key_interval          = 2.0,
-    space_key_interval      = 0.3,
-    space_key_interval_fast = 0.05,
-    space_key_pause         = 0.1,
-    confidence_threshold    = 0.60,
-    jump_key                = "space",
+    r_key_interval          = 180.0,
+    w_key_cps               = 20.0,
 )
 
 chest_config = ChestHuntConfig(
@@ -37,14 +34,6 @@ bonus_config = BonusStageConfig(
     jump_interval            = 3.0,
 )
 
-target_configs = [
-    TargetConfig("bat.png",    1),
-    TargetConfig("dragon.png", 1),
-    TargetConfig("eagle.png",  1),
-    TargetConfig("flame.png",  1),
-    TargetConfig("coin.png",   2),
-]
-
 if __name__ == "__main__":
-    ui = ConfigUI(bot_config, chest_config, bonus_config, target_configs)
+    ui = ConfigUI(bot_config, chest_config, bonus_config)
     ui.show()

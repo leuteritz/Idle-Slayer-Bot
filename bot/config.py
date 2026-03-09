@@ -6,15 +6,9 @@ class BotConfig:
     game_title:              str   = "Idle Slayer"
     disable_failsafe:        bool  = False   # PyAutoGUI FailSafe deaktivieren (Maus in Ecke = Stop)
     monitor_index:           int   = 2
-    d_key_interval:          float = 4.0
-    r_key_interval:          float = 600.0
-    space_key_interval:      float = 0.3
-    space_key_interval_fast: float = 0.05
-    space_key_pause:         float = 0.1
-    confidence_threshold:    float = 0.60
-    jump_key:                str   = "space"
-    cooldown:                float = 1.0
-    check_interval:          float = 0.2
+    d_key_interval:          float = 2.0
+    r_key_interval:          float = 180.0
+    w_key_cps:               float = 20.0    # W-Taste Clicks pro Sekunde
 
 
 @dataclass
@@ -46,7 +40,3 @@ class BonusStageConfig:
     jump_interval:           float = 3.0           # Alle X Sekunden springen
 
 
-@dataclass
-class TargetConfig:
-    filename: str
-    priority: int
