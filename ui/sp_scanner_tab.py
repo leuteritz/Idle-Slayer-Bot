@@ -58,15 +58,11 @@ class SpScannerTab:
         row1 = tk.Frame(input_card, bg=SURF0)
         row1.pack(fill="x", pady=2)
 
-        tk.Label(row1, text="SP Min:", bg=SURF0, fg=TEXT, font=FONT_UI).pack(side="left")
-        self._sp_min_var = tk.StringVar(value="0")
-        ttk.Entry(row1, textvariable=self._sp_min_var, width=18).pack(side="left", padx=(8, 20))
+        tk.Label(row1, text="Current SP:", bg=SURF0, fg=TEXT, font=FONT_UI).pack(side="left")
+        self._sp_var = tk.StringVar(value="")
+        ttk.Entry(row1, textvariable=self._sp_var, width=20).pack(side="left", padx=(8, 0))
 
-        tk.Label(row1, text="SP Max:", bg=SURF0, fg=TEXT, font=FONT_UI).pack(side="left")
-        self._sp_max_var = tk.StringVar(value="0")
-        ttk.Entry(row1, textvariable=self._sp_max_var, width=18).pack(side="left", padx=(8, 0))
-
-        tk.Label(input_card, text="Bereich eingeben (z. B. 17.8 M, 500 K, 1.2 B, 3 T)",
+        tk.Label(input_card, text="Enter your current Slayer Points (e.g. 25.1 M, 500 K, 1.2 B)",
                  bg=SURF0, fg=DIM, font=FONT_SMALL, anchor="w").pack(anchor="w", pady=(4, 0))
 
         # ── Buttons ─────────────────────────────────────────────────────────
@@ -154,15 +150,18 @@ class SpScannerTab:
             return
 
         try:
-            sp_min = self._parse_sp(self._sp_min_var.get())
-            sp_max = self._parse_sp(self._sp_max_var.get())
+            sp_value = self._parse_sp(self._sp_var.get())
         except ValueError:
-            self._set_status("Ungültige Eingabe – bitte Zahlen eingeben (z. B. 17.8 M, 500 K).")
+            self._set_status("Invalid input – enter your current SP (e.g. 25.1 M, 500 K, 1.2 B).")
             return
 
-        if sp_min >= sp_max:
-            self._set_status("SP Min muss kleiner als SP Max sein.")
+        if sp_value <= 0:
+            self._set_status("SP value must be greater than 0.")
             return
+
+        tolerance = max(100.0, sp_value * 0.01)  # ±1%
+        sp_min = sp_value - tolerance
+        sp_max = sp_value + tolerance
 
         self._scanning = True
         self._stop_flag.clear()
