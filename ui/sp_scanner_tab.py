@@ -13,12 +13,51 @@ BLUE   = "#89b4fa"
 GREEN  = "#a6e3a1"
 RED    = "#f38ba8"
 ORANGE = "#fab387"
+YELLOW = "#f9e2af"
+MAUVE  = "#cba6f7"
 
 FONT_UI    = ("Segoe UI", 10)
 FONT_BOLD  = ("Segoe UI", 10, "bold")
 FONT_MONO  = ("Consolas", 9)
 FONT_SMALL = ("Segoe UI", 8)
 FONT_HDR   = ("Segoe UI", 9, "bold")
+FONT_BIG   = ("Segoe UI", 22, "bold")
+FONT_MED   = ("Segoe UI", 13, "bold")
+FONT_LABEL = ("Segoe UI", 8)
+
+
+def _fmt(value: float) -> str:
+    """Format a number with K/M/B/T suffix."""
+    if value >= 1e12:
+        return f"{value / 1e12:.3f} T"
+    if value >= 1e9:
+        return f"{value / 1e9:.3f} B"
+    if value >= 1e6:
+        return f"{value / 1e6:.3f} M"
+    if value >= 1e3:
+        return f"{value / 1e3:.3f} K"
+    return f"{value:,.2f}"
+
+
+def _fmt_duration(seconds: float) -> str:
+    seconds = int(seconds)
+    h, m, s = seconds // 3600, (seconds % 3600) // 60, seconds % 60
+    if h:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
+class _StatCard(tk.Frame):
+    """A single statistic card with a label and a value."""
+    def __init__(self, parent, label: str, color: str = TEXT, wide: bool = False):
+        super().__init__(parent, bg=SURF0, padx=16, pady=12)
+        tk.Label(self, text=label, bg=SURF0, fg=DIM, font=FONT_LABEL).pack(anchor="w")
+        self._var = tk.StringVar(value="—")
+        tk.Label(self, textvariable=self._var, bg=SURF0, fg=color,
+                 font=FONT_MED if not wide else FONT_BIG).pack(anchor="w", pady=(2, 0))
+
+    def set(self, text: str):
+        self._var.set(text)
 
 
 class SpScannerTab:
@@ -29,13 +68,21 @@ class SpScannerTab:
         self._sp_data = sp_data if sp_data is not None else {}
         self._log_fn = log_fn or (lambda msg: None)
         self._memory = None
-        self._candidates = []       # [(addr, v_initial, v_current)]
+        self._candidates = []       # [(addr, v_session_start, v_current)]
         self._scan_thread = None
         self._scanning = False
         self._live_updating = False
         self._stop_flag = threading.Event()
 
+        # Session tracking
+        self._session_start_time: float | None = None
+        self._session_start_sp:   float | None = None
+        self._sp_1min_ago:        float | None = None   # SP-Wert vor ~60s für Rate
+        self._sp_1min_time:       float | None = None
+
         self._build_ui(parent)
+
+    # ------------------------------------------------------------------ UI --
 
     def _build_ui(self, parent):
         canvas    = tk.Canvas(parent, bg=BASE, highlightthickness=0)
@@ -54,13 +101,13 @@ class SpScannerTab:
         canvas.bind("<MouseWheel>", _scroll)
         self._inner.bind("<MouseWheel>", _scroll)
 
-        # Header
+        # ── Header ──────────────────────────────────────────────────────────
         hdr = tk.Frame(self._inner, bg=BASE)
         hdr.pack(fill="x", padx=16, pady=(14, 6))
         tk.Label(hdr, text="Slayer Points Scanner",
                  bg=BASE, fg=BLUE, font=FONT_BOLD).pack(side="left")
 
-        # Input fields
+        # ── Eingabe ─────────────────────────────────────────────────────────
         input_card = tk.Frame(self._inner, bg=SURF0, padx=14, pady=10)
         input_card.pack(fill="x", padx=16, pady=(4, 2))
 
@@ -75,11 +122,10 @@ class SpScannerTab:
         self._sp_max_var = tk.StringVar(value="0")
         ttk.Entry(row1, textvariable=self._sp_max_var, width=18).pack(side="left", padx=(8, 0))
 
-        # Description
-        tk.Label(input_card, text="Bereich eingeben, in dem die aktuellen Slayer Points liegen",
+        tk.Label(input_card, text="Bereich eingeben (z. B. 17.8 M, 500 K, 1.2 B, 3 T)",
                  bg=SURF0, fg=DIM, font=FONT_SMALL, anchor="w").pack(anchor="w", pady=(4, 0))
 
-        # Buttons
+        # ── Buttons ─────────────────────────────────────────────────────────
         btn_frame = tk.Frame(self._inner, bg=BASE)
         btn_frame.pack(fill="x", padx=16, pady=(8, 4))
 
@@ -94,51 +140,67 @@ class SpScannerTab:
             bg=RED, fg="#11111b", font=FONT_BOLD, relief="flat",
             padx=14, pady=6, cursor="hand2")
 
-        # Status label
+        # ── Status ──────────────────────────────────────────────────────────
         self._status_var = tk.StringVar(value="")
-        self._status_lbl = tk.Label(self._inner, textvariable=self._status_var,
-                                    bg=BASE, fg=DIM, font=FONT_SMALL, anchor="w")
-        self._status_lbl.pack(fill="x", padx=16, pady=(2, 6))
+        tk.Label(self._inner, textvariable=self._status_var,
+                 bg=BASE, fg=DIM, font=FONT_SMALL, anchor="w").pack(
+            fill="x", padx=16, pady=(2, 4))
 
-        # Separator
-        tk.Frame(self._inner, bg=SURF0, height=1).pack(fill="x", padx=16, pady=(2, 8))
+        # ── Trennlinie ──────────────────────────────────────────────────────
+        tk.Frame(self._inner, bg=SURF0, height=1).pack(fill="x", padx=16, pady=(2, 12))
 
-        # Results table
-        table_frame = tk.Frame(self._inner, bg=BASE)
-        table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
+        # ── Statistik-Dashboard ─────────────────────────────────────────────
+        stats = tk.Frame(self._inner, bg=BASE)
+        stats.pack(fill="x", padx=16, pady=(0, 12))
 
-        columns = ("address", "initial", "current", "diff", "pct")
-        self._tree = ttk.Treeview(table_frame, columns=columns, show="headings",
-                                  height=10)
-        self._tree.heading("address", text="Adresse")
-        self._tree.heading("initial", text="Wert vorher")
-        self._tree.heading("current", text="Wert aktuell")
-        self._tree.heading("diff",    text="Diff")
-        self._tree.heading("pct",     text="%")
+        # Große SP-Karte (volle Breite)
+        big_card = tk.Frame(stats, bg=SURF0, padx=20, pady=14)
+        big_card.pack(fill="x", pady=(0, 8))
+        tk.Label(big_card, text="AKTUELLE SLAYER POINTS",
+                 bg=SURF0, fg=DIM, font=FONT_LABEL).pack(anchor="w")
+        self._card_current = tk.StringVar(value="—")
+        tk.Label(big_card, textvariable=self._card_current,
+                 bg=SURF0, fg=BLUE, font=FONT_BIG).pack(anchor="w", pady=(4, 0))
 
-        self._tree.column("address", width=160, anchor="w")
-        self._tree.column("initial", width=120, anchor="e")
-        self._tree.column("current", width=120, anchor="e")
-        self._tree.column("diff",    width=100, anchor="e")
-        self._tree.column("pct",     width=80,  anchor="e")
+        # Zweite Reihe: Farmed + Session-Zeit
+        row_a = tk.Frame(stats, bg=BASE)
+        row_a.pack(fill="x", pady=(0, 8))
+        row_a.columnconfigure(0, weight=1)
+        row_a.columnconfigure(1, weight=1)
 
-        # Style the treeview
-        style = ttk.Style()
-        style.configure("Treeview",
-                        background=SURF0, foreground=TEXT,
-                        fieldbackground=SURF0, font=FONT_MONO,
-                        rowheight=24)
-        style.configure("Treeview.Heading",
-                        background=SURF1, foreground=TEXT,
-                        font=FONT_HDR)
-        style.map("Treeview", background=[("selected", BLUE)],
-                  foreground=[("selected", "#11111b")])
+        self._card_farmed = self._make_card(row_a, "SESSION GEFARMT", GREEN, 0)
+        self._card_time   = self._make_card(row_a, "SESSION DAUER",   YELLOW, 1)
 
-        tree_scroll = ttk.Scrollbar(table_frame, orient="vertical",
-                                    command=self._tree.yview)
-        self._tree.configure(yscrollcommand=tree_scroll.set)
-        self._tree.pack(side="left", fill="both", expand=True)
-        tree_scroll.pack(side="right", fill="y")
+        # Dritte Reihe: SP/min + SP/h
+        row_b = tk.Frame(stats, bg=BASE)
+        row_b.pack(fill="x", pady=(0, 8))
+        row_b.columnconfigure(0, weight=1)
+        row_b.columnconfigure(1, weight=1)
+
+        self._card_per_min  = self._make_card(row_b, "SP / MINUTE",  ORANGE, 0)
+        self._card_per_hour = self._make_card(row_b, "SP / STUNDE",  MAUVE,  1)
+
+    def _make_card(self, parent, label: str, color: str, col: int):
+        card = tk.Frame(parent, bg=SURF0, padx=16, pady=12)
+        card.grid(row=0, column=col, sticky="nsew",
+                  padx=(0, 8) if col == 0 else (0, 0))
+        tk.Label(card, text=label, bg=SURF0, fg=DIM, font=FONT_LABEL).pack(anchor="w")
+        var = tk.StringVar(value="—")
+        tk.Label(card, textvariable=var, bg=SURF0, fg=color,
+                 font=FONT_MED).pack(anchor="w", pady=(4, 0))
+        return var
+
+    # ---------------------------------------------------------------- Parsing
+
+    @staticmethod
+    def _parse_sp(text: str) -> float:
+        _SUFFIXES = {"k": 1e3, "m": 1e6, "b": 1e9, "t": 1e12}
+        s = text.strip().replace(",", "").replace("_", "").replace(" ", "")
+        if s and s[-1].lower() in _SUFFIXES:
+            return float(s[:-1]) * _SUFFIXES[s[-1].lower()]
+        return float(s)
+
+    # --------------------------------------------------------------- Actions
 
     def _set_status(self, text: str):
         self._status_var.set(text)
@@ -148,10 +210,10 @@ class SpScannerTab:
             return
 
         try:
-            sp_min = float(self._sp_min_var.get().replace(",", "").replace("_", ""))
-            sp_max = float(self._sp_max_var.get().replace(",", "").replace("_", ""))
+            sp_min = self._parse_sp(self._sp_min_var.get())
+            sp_max = self._parse_sp(self._sp_max_var.get())
         except ValueError:
-            self._set_status("Ungültige Eingabe – bitte Zahlen eingeben.")
+            self._set_status("Ungültige Eingabe – bitte Zahlen eingeben (z. B. 17.8 M, 500 K).")
             return
 
         if sp_min >= sp_max:
@@ -163,10 +225,12 @@ class SpScannerTab:
         self._btn_scan.pack_forget()
         self._btn_stop.pack(side="left", padx=(0, 8))
 
-        # Clear old results
-        for item in self._tree.get_children():
-            self._tree.delete(item)
         self._candidates = []
+        self._session_start_time = None
+        self._session_start_sp   = None
+        self._sp_1min_ago        = None
+        self._sp_1min_time       = None
+        self._reset_cards()
 
         self._scan_thread = threading.Thread(
             target=self._scan_worker, args=(sp_min, sp_max), daemon=True)
@@ -183,6 +247,15 @@ class SpScannerTab:
         if self._memory:
             self._memory.close()
             self._memory = None
+
+    def _reset_cards(self):
+        self._card_current.set("—")
+        self._card_farmed.set("—")
+        self._card_time.set("—")
+        self._card_per_min.set("—")
+        self._card_per_hour.set("—")
+
+    # -------------------------------------------------------------- Scanning
 
     def _scan_worker(self, sp_min: float, sp_max: float):
         try:
@@ -201,7 +274,6 @@ class SpScannerTab:
         import win32gui
         from bot.memory_reader import GameMemory
 
-        # Find game window
         self._parent.after(0, lambda: self._set_status("Suche Spielfenster..."))
         hwnd = win32gui.FindWindow(None, self._game_title)
         if not hwnd:
@@ -210,7 +282,7 @@ class SpScannerTab:
             self._parent.after(0, lambda: self._set_status(msg))
             return
 
-        self._log_fn(f"[SP] Suche Adresse für SP-Bereich {sp_min:,.0f} – {sp_max:,.0f}...")
+        self._log_fn(f"[SP] Suche Adresse für SP-Bereich {_fmt(sp_min)} – {_fmt(sp_max)}...")
         self._memory = GameMemory(hwnd)
 
         if self._stop_flag.is_set():
@@ -220,22 +292,21 @@ class SpScannerTab:
         self._parent.after(0, lambda: self._set_status("Scan 1 läuft..."))
         hits1 = self._memory.scan_range(sp_min, sp_max)
         n1 = len(hits1)
-        self._parent.after(0, lambda: self._set_status(f"Scan 1: {n1} Treffer. Warte 10s..."))
+        self._parent.after(0, lambda: self._set_status(f"Scan 1: {n1} Treffer. Warte 10 s..."))
 
         if self._stop_flag.is_set():
             return
 
-        # Wait 10 seconds
         for _ in range(100):
             if self._stop_flag.is_set():
                 return
             time.sleep(0.1)
 
-        # Scan 2 with wider range
         if not hits1:
             self._parent.after(0, lambda: self._set_status("Keine Treffer in Scan 1."))
             return
 
+        # Scan 2
         scan2_min = min(hits1.values()) * 0.995
         scan2_max = max(hits1.values()) * 1.05
         self._parent.after(0, lambda: self._set_status("Scan 2 läuft..."))
@@ -267,37 +338,35 @@ class SpScannerTab:
             self._parent.after(0, lambda: self._set_status(msg))
             return
 
-        # Automatically pick the first candidate
         best = candidates[0]
-        self._candidates = [best]
-        nc = len(candidates)
-
+        nc   = len(candidates)
         self._log_fn(f"[SP] Adresse gefunden: 0x{best[0]:016X} "
                      f"({nc} Kandidat(en), verwende ersten)")
 
-        # Populate table (all candidates shown, first is used for header)
-        def fill_table():
-            for item in self._tree.get_children():
-                self._tree.delete(item)
-            for addr, v_init, v_cur in candidates:
-                diff = v_cur - v_init
-                pct = diff / v_init * 100 if v_init > 0 else 0
-                self._tree.insert("", "end", iid=str(addr), values=(
-                    f"0x{addr:016X}",
-                    f"{v_init:,.2f}",
-                    f"{v_cur:,.2f}",
-                    f"{diff:,.2f}",
-                    f"{pct:.4f}%",
-                ))
-            self._sp_data["value"] = best[2]
-            self._set_status(
-                f"{nc} Kandidat(en) – verwende 0x{best[0]:016X}")
+        # Initialisiere Session
+        now = time.time()
+        self._session_start_time = now
+        self._session_start_sp   = best[2]
+        self._sp_1min_ago        = best[2]
+        self._sp_1min_time       = now
 
-        self._parent.after(0, fill_table)
+        self._candidates = [(best[0], best[2], best[2])]
+        self._sp_data["value"] = best[2]
 
-        # Start live update loop
+        def init_cards():
+            self._card_current.set(_fmt(best[2]))
+            self._card_farmed.set("0")
+            self._card_time.set("00:00")
+            self._card_per_min.set("0")
+            self._card_per_hour.set("0")
+            self._set_status(f"Adresse gefunden – Live-Tracking aktiv ({nc} Kandidat(en))")
+
+        self._parent.after(0, init_cards)
+
         self._live_updating = True
         self._live_update_loop()
+
+    # ---------------------------------------------------------- Live update
 
     def _live_update_loop(self):
         if not self._live_updating or self._stop_flag.is_set():
@@ -305,40 +374,54 @@ class SpScannerTab:
         if not self._memory or not self._candidates:
             return
 
+        now = time.time()
         updated = []
-        for addr, v_init, v_prev in self._candidates:
+        for addr, v_start, v_prev in self._candidates:
             try:
                 v_now = self._memory.read_double(addr)
                 if v_now is None:
                     v_now = v_prev
             except Exception:
                 v_now = v_prev
-
-            diff = v_now - v_init
-            pct = diff / v_init * 100 if v_init > 0 else 0
-
-            # Update tree item
-            item_id = str(addr)
-            if self._tree.exists(item_id):
-                self._tree.item(item_id, values=(
-                    f"0x{addr:016X}",
-                    f"{v_init:,.2f}",
-                    f"{v_now:,.2f}",
-                    f"{diff:,.2f}",
-                    f"{pct:.4f}%",
-                ))
-
-            updated.append((addr, v_init, v_now))
+            updated.append((addr, v_start, v_now))
 
         self._candidates = updated
+        if not updated:
+            return
 
-        # Erste Adresse in Header-Badge schreiben
-        if updated:
-            self._sp_data["value"] = updated[0][2]
-        ts = time.strftime("%H:%M:%S")
-        self._set_status(f"{len(updated)} Kandidaten – Letzte Aktualisierung: {ts}")
+        v_now = updated[0][2]
+        self._sp_data["value"] = v_now
 
-        # Schedule next update in 1 second
+        # Farmed since session start
+        farmed = max(0.0, v_now - self._session_start_sp) if self._session_start_sp else 0.0
+
+        # Session duration
+        elapsed = now - self._session_start_time if self._session_start_time else 0.0
+
+        # SP/min rate: use sliding 60s window
+        if self._sp_1min_time and self._sp_1min_ago is not None:
+            window = now - self._sp_1min_time
+            if window >= 60:
+                rate_per_min  = (v_now - self._sp_1min_ago) / (window / 60)
+                # slide the window forward
+                self._sp_1min_ago  = v_now
+                self._sp_1min_time = now
+            elif elapsed > 0:
+                # Not enough time yet – use full session average
+                rate_per_min = farmed / (elapsed / 60) if elapsed >= 1 else 0.0
+            else:
+                rate_per_min = 0.0
+        else:
+            rate_per_min = 0.0
+
+        rate_per_hour = rate_per_min * 60
+
+        self._card_current.set(_fmt(v_now))
+        self._card_farmed.set(_fmt(farmed) if farmed >= 1 else "0")
+        self._card_time.set(_fmt_duration(elapsed))
+        self._card_per_min.set(_fmt(rate_per_min) if rate_per_min >= 1 else "0")
+        self._card_per_hour.set(_fmt(rate_per_hour) if rate_per_hour >= 1 else "0")
+
         self._parent.after(1000, self._live_update_loop)
 
     def stop(self):
