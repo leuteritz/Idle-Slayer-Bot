@@ -44,6 +44,8 @@ from ui.theme import (BASE, MANTLE, CRUST, SURF0, SURF1, TEXT, DIM,
                       BLUE, GREEN, ORANGE, RED, SEPARATOR, TINT_DIM,
                       FONT_UI, FONT_BOLD, FONT_HDR, FONT_SMALL, lighten)
 
+AUTO_SAVE_PATH = "config.json"
+
 NAV_ITEMS = [
     ("quick",   "🚀", "Übersicht"),
     ("bot",     "🤖", "Bot"),
@@ -87,6 +89,7 @@ class ConfigUI:
             pass
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
+        self._load_auto_save()
         self._apply_style()
         self._build_ui()
         self._poll_log()
@@ -380,6 +383,29 @@ class ConfigUI:
         except (OSError, json.JSONDecodeError, KeyError) as e:
             messagebox.showerror("Import fehlgeschlagen", str(e))
 
+    def _load_auto_save(self):
+        """Load config.json if it exists and update config objects before the UI is built."""
+        try:
+            with open(AUTO_SAVE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            import_config(data, self.bot_config, self.chest_config, self.bonus_config)
+        except FileNotFoundError:
+            pass
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass  # silently ignore a corrupted file
+
+    def _save_auto_save(self):
+        """Write current UI values to config objects and persist to config.json."""
+        for section, cfg in [("bot",   self.bot_config),
+                              ("chest", self.chest_config),
+                              ("bonus", self.bonus_config)]:
+            self._write_fields(section, cfg)
+        try:
+            with open(AUTO_SAVE_PATH, "w", encoding="utf-8") as f:
+                f.write(export_config(self.bot_config, self.chest_config, self.bonus_config))
+        except OSError:
+            pass  # best-effort; don't block window close on I/O error
+
     # ── Log polling ───────────────────────────────────────────
 
     def _poll_log(self):
@@ -479,6 +505,7 @@ class ConfigUI:
             self._set_status("Läuft", GREEN)
 
     def _on_close(self):
+        self._save_auto_save()
         if self._hotkey_thread:
             self._hotkey_thread.stop()
         self._sp_scanner_tab.stop()
