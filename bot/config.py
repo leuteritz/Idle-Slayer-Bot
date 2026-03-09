@@ -3,43 +3,40 @@ from dataclasses import dataclass
 
 @dataclass
 class BotConfig:
-    game_title:              str   = "Idle Slayer"
-    disable_failsafe:        bool  = False   # PyAutoGUI FailSafe deaktivieren (Maus in Ecke = Stop)
-    monitor_index:           int   = 2
-    d_key_interval:          float = 2.0
-    r_key_interval:          float = 180.0
-    w_mode:                  int   = 1       # 1 = CPS-Spam, 2 = Lang + 2× Kurz
-    w_key_cps:               float = 20.0    # Modus 1: Clicks pro Sekunde
-    w_hold_time:             float = 0.5     # Modus 2: langer Druck (s)
-    w_short_count:           int   = 2       # Modus 2: Anzahl kurze Drücke danach
+    game_title:              str   = "Idle Slayer"  # window title used to find the game process
+    disable_failsafe:        bool  = False           # disable PyAutoGUI failsafe (mouse to corner = stop)
+    monitor_index:           int   = 2               # mss monitor index (0 = virtual combined, 1+ = real)
+    d_key_interval:          float = 2.0             # seconds between each D key press
+    r_key_interval:          float = 180.0           # seconds between each R key press
+    w_mode:                  int   = 1               # 1 = CPS spam, 2 = long hold + short presses
+    w_key_cps:               float = 20.0            # mode 1: W key clicks per second
+    w_hold_time:             float = 0.3             # mode 2: duration of the long W press (seconds)
+    w_short_count:           int   = 2               # mode 2: number of short W presses after the long one
 
 
 @dataclass
 class ChestHuntConfig:
-    enabled:                 bool  = True
-    template:                str   = "chest.png"
-    wait_per_chest:          float = 2.0
-    confidence:              float = 0.70
-    rows:                    int   = 3
-    cols:                    int   = 10
-    panic_button_template:   str   = "chest_close.png"
-    panic_button_confidence: float = 0.70
-
+    enabled:                 bool  = True            # enable chest hunt minigame automation
+    template:                str   = "chest.png"     # template image for chest detection
+    wait_per_chest:          float = 2.0             # seconds to wait after clicking each chest
+    confidence:              float = 0.70            # minimum match confidence for chest detection
+    rows:                    int   = 3               # number of rows in the chest grid
+    cols:                    int   = 10              # number of columns in the chest grid
+    panic_button_template:   str   = "chest_close.png"  # template for the Mimik close button
+    panic_button_confidence: float = 0.70            # minimum match confidence for the panic button
 
 
 @dataclass
 class BonusStageConfig:
-    enabled:                 bool  = True
-    template_swipe_left:     str   = "bonus_stage_left.png"
-    template_swipe_right:    str   = "bonus_stage_right.png"
-    confidence:              float = 0.70
-    swipe_start_offset:      int   = 150
-    swipe_distance:          int   = 350
-    swipe_duration:          float = 0.4
-    close_button_template:   str   = "bonus_stage_close.png"
-    close_button_confidence: float = 0.70
-    jump_key:                str   = "space"       # Taste die im Minispiel gedrückt wird
-    jump_hold_time:          float = 0.05          # Wie lange die Taste gehalten wird
-    jump_interval:           float = 3.0           # Alle X Sekunden springen
-
-
+    enabled:                 bool  = True                    # enable bonus stage minigame automation
+    template_swipe_left:     str   = "bonus_stage_left.png"  # template for left swipe arrow
+    template_swipe_right:    str   = "bonus_stage_right.png" # template for right swipe arrow
+    confidence:              float = 0.70                    # minimum match confidence for swipe detection
+    swipe_start_offset:      int   = 150                     # pixels from arrow center to start the swipe
+    swipe_distance:          int   = 350                     # total swipe length in pixels
+    swipe_duration:          float = 0.4                     # duration of the swipe drag (seconds)
+    close_button_template:   str   = "bonus_stage_close.png" # template for the close button
+    close_button_confidence: float = 0.70                    # minimum match confidence for close button
+    jump_key:                str   = "space"                 # key pressed during the bonus stage
+    jump_hold_time:          float = 0.05                    # how long the jump key is held (seconds)
+    jump_interval:           float = 3.0                     # seconds between each jump key press
