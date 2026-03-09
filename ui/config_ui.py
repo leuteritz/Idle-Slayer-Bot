@@ -159,6 +159,9 @@ class ConfigUI:
         for key, icon, label in NAV_ITEMS:
             self._make_nav_item(sidebar, key, icon, label)
 
+        tk.Label(sidebar, text="© Leuteritz", bg=MANTLE, fg="#8E8E93",
+                 font=("SF Pro Display", 12)).pack(side="bottom", pady=(0, 10))
+
         p = tk.Frame(self._content, bg=BASE)
         QuickTab(p, configs, self._entries)
         self._pages["quick"] = p
@@ -186,43 +189,53 @@ class ConfigUI:
         inner = tk.Frame(frame, bg=MANTLE, padx=14, pady=10)
         inner.pack(fill="x")
 
-        lbl = tk.Label(inner, text=f"{icon}  {label}",
-                       bg=MANTLE, fg=DIM, font=FONT_UI, anchor="w")
-        lbl.pack(fill="x")
+        # Split icon and label into separate widgets with fixed icon width
+        # so mismatched emoji sizes don't break alignment
+        icon_lbl = tk.Label(inner, text=icon, bg=MANTLE, fg=DIM,
+                            font=FONT_UI, width=2, anchor="center")
+        icon_lbl.pack(side="left")
 
-        self._nav_refs[page_name] = (frame, inner, lbl)
+        lbl = tk.Label(inner, text=label, bg=MANTLE, fg=DIM,
+                       font=FONT_UI, anchor="w")
+        lbl.pack(side="left", padx=(6, 0), fill="x")
+
+        self._nav_refs[page_name] = (frame, inner, lbl, icon_lbl)
 
         def on_enter(e):
             if self._active_page != page_name:
                 for w in (frame, inner): w.config(bg=SURF0)
                 lbl.config(bg=SURF0, fg=TEXT)
+                icon_lbl.config(bg=SURF0, fg=TEXT)
 
         def on_leave(e):
             if self._active_page != page_name:
                 for w in (frame, inner): w.config(bg=MANTLE)
                 lbl.config(bg=MANTLE, fg=DIM)
+                icon_lbl.config(bg=MANTLE, fg=DIM)
 
         def on_click(e):
             self._show_page(page_name)
 
-        for w in (frame, inner, lbl):
+        for w in (frame, inner, lbl, icon_lbl):
             w.bind("<Enter>",    on_enter)
             w.bind("<Leave>",    on_leave)
             w.bind("<Button-1>", on_click)
 
     def _show_page(self, page_name: str):
         if self._active_page and self._active_page in self._nav_refs:
-            frame, inner, lbl = self._nav_refs[self._active_page]
+            frame, inner, lbl, icon_lbl = self._nav_refs[self._active_page]
             for w in (frame, inner): w.config(bg=MANTLE)
             lbl.config(bg=MANTLE, fg=DIM)
+            icon_lbl.config(bg=MANTLE, fg=DIM)
             if self._active_page in self._pages:
                 self._pages[self._active_page].pack_forget()
 
         self._active_page = page_name
-        frame, inner, lbl = self._nav_refs[page_name]
+        frame, inner, lbl, icon_lbl = self._nav_refs[page_name]
         # Apple-style: subtle fill + blue text for active nav item
         for w in (frame, inner): w.config(bg=SURF0)
         lbl.config(bg=SURF0, fg=BLUE)
+        icon_lbl.config(bg=SURF0, fg=BLUE)
 
         if page_name in self._pages:
             self._pages[page_name].pack(fill="both", expand=True)
