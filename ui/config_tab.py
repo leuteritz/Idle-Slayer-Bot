@@ -12,7 +12,10 @@ _LABELS = {
     "monitor_index":           "Monitor-Index",
     "d_key_interval":          "D-Taste Intervall (s)",
     "r_key_interval":          "R-Taste Intervall (s)",
+    "w_mode":                  "W-Modus (1 oder 2)",
     "w_key_cps":               "W-Taste CPS",
+    "w_hold_time":             "W lang halten (s)",
+    "w_short_count":           "W kurz Anzahl",
     # ChestHuntConfig
     "enabled":                 "Aktiviert",
     "template":                "Template-Datei",

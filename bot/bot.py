@@ -40,7 +40,12 @@ class IdleSlayerBot:
         self._print_startup()
 
     def _print_startup(self):
-        print(f"W-Taste: {self.cfg.w_key_cps} CPS")
+        mode_name = "CPS-Spam" if self.cfg.w_mode == 1 else "Lang + Kurz"
+        print(f"W-Modus: {self.cfg.w_mode} ({mode_name})")
+        if self.cfg.w_mode == 1:
+            print(f"  CPS: {self.cfg.w_key_cps}")
+        else:
+            print(f"  Lang: {self.cfg.w_hold_time}s, danach {self.cfg.w_short_count}× kurz")
         print(f"D-Taste: alle {self.cfg.d_key_interval}s")
         print(f"R-Taste: alle {self.cfg.r_key_interval}s")
         print(f"Chest Hunt:  {'aktiviert' if self.chest_hunt  else 'deaktiviert'}")
@@ -59,30 +64,48 @@ class IdleSlayerBot:
             self.window.send_key('r')
             self.last_r_key = now
 
-    def _handle_w_key(self, now: float):
+    # ── Modus 1: CPS-Spam ────────────────────────────────────
+
+    def _handle_w_mode1(self, now: float):
         interval = 1.0 / max(1.0, self.cfg.w_key_cps)
         if now - self.last_w_key >= interval:
             self.window.rapid_key('w')
             self.last_w_key = now
             self._w_count += 1
 
-        # Jede Sekunde loggen wie viele W gedrückt wurden
         if now - self._w_log_time >= 1.0:
             if self._w_count > 0:
                 print(f"W × {self._w_count}")
                 self._w_count = 0
             self._w_log_time = now
 
+    # ── Modus 2: 1× Lang + N× Kurz ──────────────────────────
+
+    def _handle_w_mode2(self):
+        self.window._focus()
+
+        # 1× lang drücken
+        self.window.rapid_hold('w', self.cfg.w_hold_time)
+        print(f"W gehalten ({self.cfg.w_hold_time}s)")
+
+        # N× kurz drücken, sofort hintereinander
+        for i in range(self.cfg.w_short_count):
+            self.window.rapid_key('w')
+        print(f"W × {self.cfg.w_short_count} (kurz)")
+
+        self.window._unfocus()
+
+    # ── Main Loop ────────────────────────────────────────────
+
     def run(self, stop_event: threading.Event = None,
                   pause_event: threading.Event = None,
                   crash_queue = None):
-        # Fenster einmal fokussieren für rapid_key
         self.window._focus()
 
         with mss.mss() as sct:
             monitor = sct.monitors[self.cfg.monitor_index]
             last_scan = 0
-            scan_interval = 0.2  # Minigame-Check alle 200ms
+            scan_interval = 0.2
 
             try:
                 while True:
@@ -96,7 +119,7 @@ class IdleSlayerBot:
 
                     now = time.time()
 
-                    # Minigame-Erkennung alle 200ms (braucht Screenshot)
+                    # Minigame-Erkennung alle 200ms
                     if now - last_scan >= scan_interval:
                         screenshot = sct.grab(monitor)
                         frame      = np.array(screenshot)
@@ -116,7 +139,11 @@ class IdleSlayerBot:
 
                     self._handle_d_key(now)
                     self._handle_r_key(now)
-                    self._handle_w_key(now)
+
+                    if self.cfg.w_mode == 1:
+                        self._handle_w_mode1(now)
+                    else:
+                        self._handle_w_mode2()
 
             except pyautogui.FailSafeException as e:
                 msg = "PyAutoGUI FailSafe ausgelöst – Maus in Bildschirmecke. Bot gestoppt."

@@ -23,6 +23,12 @@ class GameWindow:
         """Schneller Tastendruck ohne Fokus-Wechsel. Fenster muss bereits fokussiert sein."""
         pyautogui.press(key, _pause=False)
 
+    def rapid_hold(self, key: str, hold_time: float):
+        """Taste gedrückt halten ohne Fokus-Wechsel. Fenster muss bereits fokussiert sein."""
+        pyautogui.keyDown(key)
+        time.sleep(hold_time)
+        pyautogui.keyUp(key)
+
     def click(self, abs_x: int, abs_y: int):
         self._focus()
         pyautogui.moveTo(abs_x, abs_y, duration=0.1)

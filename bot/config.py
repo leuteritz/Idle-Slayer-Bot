@@ -8,14 +8,17 @@ class BotConfig:
     monitor_index:           int   = 2
     d_key_interval:          float = 2.0
     r_key_interval:          float = 180.0
-    w_key_cps:               float = 20.0    # W-Taste Clicks pro Sekunde
+    w_mode:                  int   = 1       # 1 = CPS-Spam, 2 = Lang + 2× Kurz
+    w_key_cps:               float = 20.0    # Modus 1: Clicks pro Sekunde
+    w_hold_time:             float = 0.5     # Modus 2: langer Druck (s)
+    w_short_count:           int   = 2       # Modus 2: Anzahl kurze Drücke danach
 
 
 @dataclass
 class ChestHuntConfig:
     enabled:                 bool  = True
     template:                str   = "chest.png"
-    wait_per_chest:          float = 5.0
+    wait_per_chest:          float = 2.0
     confidence:              float = 0.70
     rows:                    int   = 3
     cols:                    int   = 10

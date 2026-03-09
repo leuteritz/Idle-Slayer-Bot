@@ -1,19 +1,18 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ui.theme import (BASE, SURF0, TEXT, DIM, BLUE,
+from ui.theme import (BASE, SURF0, TEXT, DIM, BLUE, ORANGE,
                       FONT_UI, FONT_BOLD, FONT_SMALL, ScrollableFrame)
 
-# (section, field_name, label, description)
+# Felder die NACH dem Modus-Selector kommen
 QUICK_FIELDS = [
-    ("bot",   "disable_failsafe",        "FailSafe deaktivieren",  "Maus in Ecke löst sonst Stop aus"),
-    ("bot",   "w_key_cps",              "W-Taste CPS",            "Clicks pro Sekunde für W-Taste"),
-    ("bot",   "d_key_interval",          "D-Taste Intervall (s)",  "Alle X Sekunden wird D gedrückt"),
-    ("bot",   "r_key_interval",          "R-Taste Intervall (s)",  "Alle X Sekunden wird R gedrückt"),
-    ("chest", "confidence",              "Kisten-Confidence",      "Mindestwert für Kisten-Erkennung"),
-    ("chest", "wait_per_chest",          "Wartezeit / Kiste (s)",  "Pause nach jedem Kisten-Klick"),
-    ("bonus", "jump_interval",           "Bonus: Sprung alle (s)", "Sprungintervall im Bonus Stage"),
-    ("bonus", "confidence",              "Bonus-Confidence",       "Mindestwert für Bonus Stage Erkennung"),
+    ("bot",   "disable_failsafe",  "FailSafe deaktivieren",  "Maus in Ecke löst sonst Stop aus"),
+    ("bot",   "d_key_interval",    "D-Taste Intervall (s)",  "Alle X Sekunden wird D gedrückt"),
+    ("bot",   "r_key_interval",    "R-Taste Intervall (s)",  "Alle X Sekunden wird R gedrückt"),
+    ("chest", "confidence",        "Kisten-Confidence",      "Mindestwert für Kisten-Erkennung"),
+    ("chest", "wait_per_chest",    "Wartezeit / Kiste (s)",  "Pause nach jedem Kisten-Klick"),
+    ("bonus", "jump_interval",     "Bonus: Sprung alle (s)", "Sprungintervall im Bonus Stage"),
+    ("bonus", "confidence",        "Bonus-Confidence",       "Mindestwert für Bonus Stage Erkennung"),
 ]
 
 _SECTION_LABELS = {
@@ -22,26 +21,94 @@ _SECTION_LABELS = {
     "bonus": ("⭐", "Bonus Stage"),
 }
 
+# Modus-spezifische Felder
+_MODE1_FIELDS = [
+    ("bot", "w_key_cps",     "W-Taste CPS",           "Clicks pro Sekunde für W-Taste"),
+]
+_MODE2_FIELDS = [
+    ("bot", "w_hold_time",   "W lang halten (s)",     "Wie lange W gedrückt gehalten wird"),
+    ("bot", "w_short_count", "W kurz Anzahl",         "Wie oft W danach kurz gedrückt wird"),
+]
+
 
 class QuickTab:
     def __init__(self, parent, configs: dict, entries: dict):
         sf = ScrollableFrame(parent)
         inner = sf.inner
+        self._inner = inner
+        self._sf = sf
+        self._entries = entries
+        self._configs = configs
 
-        last_section = None
         row = 0
+        inner.columnconfigure(0, weight=1)
+
+        # ── Bot Header ───────────────────────────────────────
+        hdr_frame = tk.Frame(inner, bg=BASE)
+        hdr_frame.grid(row=row, column=0, columnspan=2,
+                       sticky="w", padx=16, pady=(14, 6))
+        tk.Label(hdr_frame, text="🤖  Bot",
+                 bg=BASE, fg=BLUE, font=FONT_BOLD).pack(side="left")
+        row += 1
+
+        # ── Modus-Auswahl ────────────────────────────────────
+        mode_card = tk.Frame(inner, bg=SURF0, padx=14, pady=10)
+        mode_card.grid(row=row, column=0, columnspan=2,
+                       sticky="ew", padx=16, pady=2)
+        mode_card.bind("<MouseWheel>", sf.scroll_handler)
+        row += 1
+
+        label_col = tk.Frame(mode_card, bg=SURF0)
+        label_col.pack(side="left", fill="x", expand=True)
+        tk.Label(label_col, text="W-Taste Modus", bg=SURF0, fg=TEXT,
+                 font=FONT_UI, anchor="w").pack(anchor="w")
+        tk.Label(label_col, text="Spielmodus für die W-Taste", bg=SURF0, fg=DIM,
+                 font=FONT_SMALL, anchor="w").pack(anchor="w")
+
+        bot_cfg = configs["bot"]
+        if ("bot", "w_mode") not in entries:
+            mode_var = tk.IntVar(value=bot_cfg.w_mode)
+            entries[("bot", "w_mode")] = mode_var
+        else:
+            mode_var = entries[("bot", "w_mode")]
+
+        btn_frame = tk.Frame(mode_card, bg=SURF0)
+        btn_frame.pack(side="right", padx=(8, 0))
+
+        self._mode_var = mode_var
+        self._mode_btns = []
+
+        for val, label in [(1, "CPS-Spam"), (2, "Lang+Kurz")]:
+            b = tk.Radiobutton(btn_frame, text=label, variable=mode_var,
+                               value=val, command=self._on_mode_change,
+                               bg=SURF0, fg=TEXT, selectcolor=SURF0,
+                               activebackground=SURF0, activeforeground=ORANGE,
+                               font=FONT_UI, indicatoron=False,
+                               padx=10, pady=4, relief="flat", bd=1,
+                               highlightthickness=0)
+            b.pack(side="left", padx=2)
+            self._mode_btns.append(b)
+
+        # ── Modus-spezifische Felder (werden dynamisch ein-/ausgeblendet)
+        self._mode_frame = tk.Frame(inner, bg=BASE)
+        self._mode_frame.grid(row=row, column=0, columnspan=2,
+                              sticky="ew", padx=0, pady=0)
+        row += 1
+        self._mode_row = row - 1
+        self._build_mode_fields()
+
+        # ── Rest: normale Felder ─────────────────────────────
+        last_section = "bot"
 
         for section, field_name, label, desc in QUICK_FIELDS:
             cfg_obj = configs[section]
             val     = getattr(cfg_obj, field_name)
 
-            # Section header
             if section != last_section:
-                if last_section is not None:
-                    tk.Frame(inner, bg=SURF0, height=1).grid(
-                        row=row, column=0, columnspan=2,
-                        sticky="ew", padx=16, pady=(2, 10))
-                    row += 1
+                tk.Frame(inner, bg=SURF0, height=1).grid(
+                    row=row, column=0, columnspan=2,
+                    sticky="ew", padx=16, pady=(2, 10))
+                row += 1
 
                 icon, name = _SECTION_LABELS[section]
                 hdr_frame = tk.Frame(inner, bg=BASE)
@@ -52,7 +119,6 @@ class QuickTab:
                 row += 1
                 last_section = section
 
-            # Reuse or create var
             if (section, field_name) not in entries:
                 var = tk.BooleanVar(value=val) if isinstance(val, bool) \
                       else tk.StringVar(value=str(val))
@@ -60,18 +126,15 @@ class QuickTab:
             else:
                 var = entries[(section, field_name)]
 
-            # Row card
             card = tk.Frame(inner, bg=SURF0, padx=14, pady=8)
             card.grid(row=row, column=0, columnspan=2,
                       sticky="ew", padx=16, pady=2)
-            inner.columnconfigure(0, weight=1)
 
-            label_col = tk.Frame(card, bg=SURF0)
-            label_col.pack(side="left", fill="x", expand=True)
-
-            tk.Label(label_col, text=label, bg=SURF0, fg=TEXT,
+            lc = tk.Frame(card, bg=SURF0)
+            lc.pack(side="left", fill="x", expand=True)
+            tk.Label(lc, text=label, bg=SURF0, fg=TEXT,
                      font=FONT_UI, anchor="w").pack(anchor="w")
-            tk.Label(label_col, text=desc, bg=SURF0, fg=DIM,
+            tk.Label(lc, text=desc, bg=SURF0, fg=DIM,
                      font=FONT_SMALL, anchor="w").pack(anchor="w")
 
             if isinstance(val, bool):
@@ -80,9 +143,42 @@ class QuickTab:
                 ttk.Entry(card, textvariable=var, width=10).pack(side="right", padx=(8, 0))
 
             card.bind("<MouseWheel>", sf.scroll_handler)
-            label_col.bind("<MouseWheel>", sf.scroll_handler)
-
+            lc.bind("<MouseWheel>", sf.scroll_handler)
             row += 1
 
-        # Bottom padding
         tk.Frame(inner, bg=BASE, height=12).grid(row=row, column=0, columnspan=2)
+
+    def _build_mode_fields(self):
+        for w in self._mode_frame.winfo_children():
+            w.destroy()
+
+        mode = self._mode_var.get()
+        fields = _MODE1_FIELDS if mode == 1 else _MODE2_FIELDS
+        bot_cfg = self._configs["bot"]
+
+        for section, field_name, label, desc in fields:
+            val = getattr(bot_cfg, field_name)
+
+            if (section, field_name) not in self._entries:
+                var = tk.StringVar(value=str(val))
+                self._entries[(section, field_name)] = var
+            else:
+                var = self._entries[(section, field_name)]
+
+            card = tk.Frame(self._mode_frame, bg=SURF0, padx=14, pady=8)
+            card.pack(fill="x", padx=16, pady=2)
+
+            lc = tk.Frame(card, bg=SURF0)
+            lc.pack(side="left", fill="x", expand=True)
+            tk.Label(lc, text=label, bg=SURF0, fg=TEXT,
+                     font=FONT_UI, anchor="w").pack(anchor="w")
+            tk.Label(lc, text=desc, bg=SURF0, fg=DIM,
+                     font=FONT_SMALL, anchor="w").pack(anchor="w")
+
+            ttk.Entry(card, textvariable=var, width=10).pack(side="right", padx=(8, 0))
+
+            card.bind("<MouseWheel>", self._sf.scroll_handler)
+            lc.bind("<MouseWheel>", self._sf.scroll_handler)
+
+    def _on_mode_change(self):
+        self._build_mode_fields()
