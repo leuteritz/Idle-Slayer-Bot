@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, filedialog, messagebox
 import threading
 import queue
 import sys
 import ctypes
 from ctypes import wintypes
 from dataclasses import fields
+import json
 import win32con
 from PIL import Image, ImageTk
 
@@ -34,7 +35,7 @@ class _HotkeyThread(threading.Thread):
         if self._tid:
             ctypes.windll.user32.PostThreadMessageW(self._tid, 0x0012, 0, 0)  # WM_QUIT
 
-from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig
+from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, export_config, import_config
 from ui.log_box import LogBox, QueueStream
 from ui.quick_tab import QuickTab
 from ui.config_tab import ConfigTab
@@ -290,6 +291,19 @@ class ConfigUI:
         tk.Label(bar, text="F9: Pause / Weiter", bg=MANTLE, fg=TINT_DIM,
                  font=FONT_SMALL).pack(side="left", padx=4)
 
+        def make_small_btn(text, cmd):
+            b = tk.Button(bar, text=text, command=cmd,
+                          bg=SURF0, fg=DIM,
+                          font=FONT_SMALL, relief="flat",
+                          padx=12, pady=6, cursor="hand2",
+                          activebackground=SURF1, activeforeground=TEXT, bd=0)
+            b.bind("<Enter>", lambda e: b.config(bg=SURF1, fg=TEXT))
+            b.bind("<Leave>", lambda e: b.config(bg=SURF0, fg=DIM))
+            return b
+
+        make_small_btn("↑ Export", self._export_config).pack(side="left", padx=(12, 2))
+        make_small_btn("↓ Import", self._import_config).pack(side="left", padx=2)
+
     # ── Config apply ──────────────────────────────────────────
 
     def _write_fields(self, section: str, config_obj):
@@ -317,6 +331,54 @@ class ConfigUI:
         self._write_fields("chest", self.chest_config)
         self._write_fields("bonus", self.bonus_config)
         self._log_box.log("✅ Konfiguration übernommen.")
+
+    def _refresh_entries(self):
+        """Sync all UI entry variables from the current config objects."""
+        section_map = {"bot": self.bot_config, "chest": self.chest_config, "bonus": self.bonus_config}
+        for (section, field_name), var in self._entries.items():
+            cfg = section_map.get(section)
+            if cfg is None:
+                continue
+            val = getattr(cfg, field_name, None)
+            if val is None:
+                continue
+            if isinstance(var, tk.BooleanVar):
+                var.set(bool(val))
+            else:
+                var.set(str(val))
+
+    def _export_config(self):
+        self._apply_configs_inplace()
+        path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON-Datei", "*.json"), ("Alle Dateien", "*.*")],
+            title="Konfiguration exportieren",
+            initialfile="idle_slayer_config.json",
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(export_config(self.bot_config, self.chest_config, self.bonus_config))
+            self._log_box.log(f"✅ Konfiguration exportiert: {path}")
+        except OSError as e:
+            messagebox.showerror("Export fehlgeschlagen", str(e))
+
+    def _import_config(self):
+        path = filedialog.askopenfilename(
+            filetypes=[("JSON-Datei", "*.json"), ("Alle Dateien", "*.*")],
+            title="Konfiguration importieren",
+        )
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            import_config(data, self.bot_config, self.chest_config, self.bonus_config)
+            self._refresh_entries()
+            self._log_box.log(f"✅ Konfiguration importiert: {path}")
+        except (OSError, json.JSONDecodeError, KeyError) as e:
+            messagebox.showerror("Import fehlgeschlagen", str(e))
 
     # ── Log polling ───────────────────────────────────────────
 

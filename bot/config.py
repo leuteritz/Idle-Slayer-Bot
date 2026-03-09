@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, fields
+import json
 
 
 @dataclass
@@ -40,3 +41,39 @@ class BonusStageConfig:
     jump_key:                str   = "space"                 # key pressed during the bonus stage
     jump_hold_time:          float = 0.05                    # how long the jump key is held (seconds)
     jump_interval:           float = 3.0                     # seconds between each jump key press
+
+
+def export_config(bot_config: "BotConfig",
+                  chest_config: "ChestHuntConfig",
+                  bonus_config: "BonusStageConfig") -> str:
+    """Serialize all three config objects to a JSON string."""
+    return json.dumps({
+        "bot":   asdict(bot_config),
+        "chest": asdict(chest_config),
+        "bonus": asdict(bonus_config),
+    }, indent=2)
+
+
+def import_config(data: dict,
+                  bot_config: "BotConfig",
+                  chest_config: "ChestHuntConfig",
+                  bonus_config: "BonusStageConfig") -> None:
+    """Update config objects in-place from a previously exported dict."""
+    for key, cfg in [("bot", bot_config), ("chest", chest_config), ("bonus", bonus_config)]:
+        section = data.get(key, {})
+        for f in fields(cfg):
+            if f.name not in section:
+                continue
+            val     = section[f.name]
+            current = getattr(cfg, f.name)
+            try:
+                if isinstance(current, bool):
+                    setattr(cfg, f.name, bool(val))
+                elif isinstance(current, int):
+                    setattr(cfg, f.name, int(val))
+                elif isinstance(current, float):
+                    setattr(cfg, f.name, float(val))
+                else:
+                    setattr(cfg, f.name, val)
+            except (ValueError, TypeError):
+                pass
