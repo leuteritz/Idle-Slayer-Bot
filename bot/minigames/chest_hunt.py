@@ -1,45 +1,31 @@
-import cv2
 import numpy as np
 import time
 import mss
-import os
 import threading
 
-from bot.template_matcher import TemplateMatcher
+from bot.template_matcher import TemplateMatcher, MINIGAMES_DIR
 from bot.config import ChestHuntConfig
-
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ASSETS_DIR    = os.path.join(_PROJECT_ROOT, "assets", "minigames")
 
 
 class ChestHunt(TemplateMatcher):
-    def __init__(self, config: ChestHuntConfig, game_window, monitor_index: int = 2):
+    def __init__(self, config: ChestHuntConfig, game_window,
+                 monitor_info: tuple):
         self.config      = config
         self.game_window = game_window
         self._active     = False
 
-        self.template       = self._load_template(config.template,              ASSETS_DIR)
-        self.panic_template = self._load_template(config.panic_button_template, ASSETS_DIR)
+        self.template       = self._load_template(config.template,              MINIGAMES_DIR)
+        self.panic_template = self._load_template(config.panic_button_template, MINIGAMES_DIR)
 
-        with mss.mss() as sct:
-            monitor = sct.monitors[monitor_index]
-            self._offset_x    = monitor["left"]
-            self._offset_y    = monitor["top"]
-            self._monitor_idx = monitor_index
+        self._offset_x, self._offset_y, self._monitor_idx = monitor_info
 
         print(f"ChestHunt bereit | Conf: {config.confidence} | Panic-Conf: {config.panic_button_confidence}")
-
-    def _grab_gray(self, sct) -> np.ndarray:
-        monitor    = sct.monitors[self._monitor_idx]
-        screenshot = sct.grab(monitor)
-        frame      = np.array(screenshot)
-        return cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
 
     def _click_on_monitor(self, x: int, y: int):
         self.game_window.click(self._offset_x + x, self._offset_y + y)
 
     def _handle_panic(self, sct) -> bool:
-        gray  = self._grab_gray(sct)
+        gray  = self.grab_gray(sct, self._monitor_idx)
         match = self._find_one(gray, self.panic_template, self.config.panic_button_confidence)
         if match:
             cx, cy, conf, tw, th = match

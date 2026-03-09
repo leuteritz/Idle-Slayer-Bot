@@ -1,65 +1,27 @@
-import cv2
 import numpy as np
 import time
 import mss
-import ctypes
-import win32gui
-import pyautogui
-import os
 
-from bot.template_matcher import TemplateMatcher
+from bot.template_matcher import TemplateMatcher, MINIGAMES_DIR
 from bot.config import BonusStageConfig
-
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ASSETS_DIR    = os.path.join(_PROJECT_ROOT, "assets", "minigames")
 
 
 class BonusStage(TemplateMatcher):
-    def __init__(self, config: BonusStageConfig, game_window, monitor_index: int = 2):
+    def __init__(self, config: BonusStageConfig, game_window,
+                 monitor_info: tuple):
         self.config      = config
         self.game_window = game_window
         self._active     = False
         self._last_jump  = 0.0
 
-        self.template_left  = self._load_template(config.template_swipe_left,   ASSETS_DIR)
-        self.template_right = self._load_template(config.template_swipe_right,  ASSETS_DIR)
-        self.close_template = self._load_template(config.close_button_template, ASSETS_DIR)
+        self.template_left  = self._load_template(config.template_swipe_left,   MINIGAMES_DIR)
+        self.template_right = self._load_template(config.template_swipe_right,  MINIGAMES_DIR)
+        self.close_template = self._load_template(config.close_button_template, MINIGAMES_DIR)
 
-        with mss.mss() as sct:
-            monitor = sct.monitors[monitor_index]
-            self._offset_x    = monitor["left"]
-            self._offset_y    = monitor["top"]
-            self._monitor_idx = monitor_index
+        self._offset_x, self._offset_y, self._monitor_idx = monitor_info
 
         print(f"BonusStage bereit | Conf: {config.confidence} | "
               f"Jump alle {config.jump_interval}s | Links+Rechts Swipe aktiv")
-
-    def _grab_gray(self, sct) -> np.ndarray:
-        monitor    = sct.monitors[self._monitor_idx]
-        screenshot = sct.grab(monitor)
-        frame      = np.array(screenshot)
-        return cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
-
-    def _force_focus(self):
-        hwnd       = self.game_window.hwnd
-        fg_thread  = ctypes.windll.user32.GetWindowThreadProcessId(
-            win32gui.GetForegroundWindow(), None)
-        tgt_thread = ctypes.windll.user32.GetWindowThreadProcessId(hwnd, None)
-        ctypes.windll.user32.AttachThreadInput(fg_thread, tgt_thread, True)
-        ctypes.windll.user32.SetForegroundWindow(hwnd)
-        ctypes.windll.user32.BringWindowToTop(hwnd)
-        ctypes.windll.user32.AttachThreadInput(fg_thread, tgt_thread, False)
-        time.sleep(0.2)
-
-    def _click(self, abs_x: int, abs_y: int):
-        previous = win32gui.GetForegroundWindow()
-        self._force_focus()
-        pyautogui.moveTo(abs_x, abs_y, duration=0.1)
-        time.sleep(0.1)
-        pyautogui.click()
-        time.sleep(0.1)
-        if previous and previous != self.game_window.hwnd:
-            ctypes.windll.user32.SetForegroundWindow(previous)
 
     def _swipe(self, cx: int, cy: int, tw: int, direction: str):
         half_w = tw // 2
@@ -75,30 +37,18 @@ class BonusStage(TemplateMatcher):
         arrow = "←" if direction == "left" else "→"
         print(f"  Swipe {arrow} | Start: ({start_x}, {abs_y}) → Ende: ({end_x}, {abs_y})")
 
-        previous = win32gui.GetForegroundWindow()
-        self._force_focus()
-
-        pyautogui.moveTo(start_x, abs_y, duration=0.1)
-        time.sleep(0.15)
-        pyautogui.mouseDown()
-        time.sleep(0.05)
-        pyautogui.moveTo(end_x, abs_y, duration=self.config.swipe_duration)
-        time.sleep(0.05)
-        pyautogui.mouseUp()
-        time.sleep(0.1)
-
-        if previous and previous != self.game_window.hwnd:
-            ctypes.windll.user32.SetForegroundWindow(previous)
+        self.game_window.drag(start_x, abs_y, end_x, abs_y,
+                              duration=self.config.swipe_duration)
 
     def _check_close_button(self, sct) -> bool:
-        gray  = self._grab_gray(sct)
+        gray  = self.grab_gray(sct, self._monitor_idx)
         match = self._find_one(gray, self.close_template, self.config.close_button_confidence)
         if match:
             cx, cy, conf, tw, th = match
             abs_x = self._offset_x + cx
             abs_y = self._offset_y + cy
             print(f"  [!] Close-Button erkannt bei ({cx}, {cy}) | Conf: {conf:.2f} – Klicke...")
-            self._click(abs_x, abs_y)
+            self.game_window.force_click(abs_x, abs_y)
             time.sleep(1.0)
             self._active    = False
             self._last_jump = 0.0

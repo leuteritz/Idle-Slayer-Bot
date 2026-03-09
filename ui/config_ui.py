@@ -38,23 +38,9 @@ from ui.quick_tab import QuickTab
 from ui.config_tab import ConfigTab
 from ui.target_tab import TargetTab
 from ui.sp_scanner_tab import SpScannerTab
-
-# ── Catppuccin Mocha ──────────────────────────────────────────
-BASE   = "#1e1e2e"
-MANTLE = "#181825"
-CRUST  = "#11111b"
-SURF0  = "#313244"
-SURF1  = "#45475a"
-TEXT   = "#cdd6f4"
-DIM    = "#6c7086"
-BLUE   = "#89b4fa"
-GREEN  = "#a6e3a1"
-ORANGE = "#fab387"
-RED    = "#f38ba8"
-
-FONT_UI   = ("Segoe UI", 10)
-FONT_BOLD = ("Segoe UI", 10, "bold")
-FONT_HDR  = ("Segoe UI", 13, "bold")
+from ui.theme import (BASE, MANTLE, CRUST, SURF0, SURF1, TEXT, DIM,
+                      BLUE, GREEN, ORANGE, RED,
+                      FONT_UI, FONT_BOLD, FONT_HDR, lighten)
 
 NAV_ITEMS = [
     ("quick",   "🚀", "Übersicht"),
@@ -64,12 +50,6 @@ NAV_ITEMS = [
     ("targets", "🎯", "Targets"),
     ("scanner", "📊", "SP Scanner"),
 ]
-
-
-def _lighten(hex_color: str, amount: int = 20) -> str:
-    h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"#{min(255, r+amount):02x}{min(255, g+amount):02x}{min(255, b+amount):02x}"
 
 
 class ConfigUI:
@@ -266,7 +246,7 @@ class ConfigUI:
         bar.pack(fill="x")
 
         def make_btn(text, color, cmd):
-            lighter = _lighten(color)
+            lighter = lighten(color)
             b = tk.Button(bar, text=text, command=cmd,
                           bg=color, fg=CRUST,
                           font=FONT_BOLD, relief="flat",
@@ -336,8 +316,8 @@ class ConfigUI:
             self._on_bot_crashed("THREAD_DEAD", "Bot-Thread unerwartet beendet.")
         sp = self._sp_data.get("value")
         if sp is not None:
-            from bot.memory_reader import _format_isp
-            self._sp_label.configure(text=f"SP: {_format_isp(sp)}", fg=GREEN)
+            from bot.memory_reader import format_sp
+            self._sp_label.configure(text=f"SP: {format_sp(sp)}", fg=GREEN)
         self.root.after(100, self._poll_log)
 
     # ── Status ────────────────────────────────────────────────

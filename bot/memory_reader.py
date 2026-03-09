@@ -31,16 +31,17 @@ class MEMORY_BASIC_INFORMATION(ctypes.Structure):
     ]
 
 
-def _format_isp(value: float) -> str:
+def format_sp(value: float) -> str:
+    """Format a number with K/M/B/T suffix."""
     if value >= 1e12:
-        return f"{value / 1e12:.2f}T"
+        return f"{value / 1e12:.3f} T"
     if value >= 1e9:
-        return f"{value / 1e9:.2f}B"
+        return f"{value / 1e9:.3f} B"
     if value >= 1e6:
-        return f"{value / 1e6:.2f}M"
+        return f"{value / 1e6:.3f} M"
     if value >= 1e3:
-        return f"{value / 1e3:.2f}K"
-    return f"{value:.2f}"
+        return f"{value / 1e3:.3f} K"
+    return f"{value:,.2f}"
 
 
 class GameMemory:
@@ -134,7 +135,7 @@ class GameMemory:
     def auto_find(self, initial_value: float, stop_event=None,
                   log_fn=print, max_rounds: int = 5, wait: float = 5.0):
         tol = max(100.0, initial_value * 0.002)
-        log_fn(f"[ISP] Scanne nach Wert ~{_format_isp(initial_value)} (±{tol:.0f})...")
+        log_fn(f"[ISP] Scanne nach Wert ~{format_sp(initial_value)} (±{tol:.0f})...")
 
         candidates = self.scan_double(initial_value, tolerance=tol)
         log_fn(f"[ISP] {len(candidates)} Kandidaten gefunden")

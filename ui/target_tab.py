@@ -2,25 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from bot.config import TargetConfig
 
-BASE   = "#1e1e2e"
-MANTLE = "#181825"
-SURF0  = "#313244"
-SURF1  = "#45475a"
-TEXT   = "#cdd6f4"
-DIM    = "#7f849c"
-BLUE   = "#89b4fa"
-RED    = "#f38ba8"
-CRUST  = "#11111b"
-
-FONT_UI   = ("Segoe UI", 10)
-FONT_BOLD = ("Segoe UI", 10, "bold")
-FONT_HDR  = ("Segoe UI", 9, "bold")
-
-
-def _lighten(hex_color: str, amount: int = 20) -> str:
-    h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"#{min(255, r+amount):02x}{min(255, g+amount):02x}{min(255, b+amount):02x}"
+from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, RED, CRUST,
+                      FONT_UI, FONT_BOLD, FONT_HDR_SMALL, lighten, ScrollableFrame)
 
 
 class TargetTab:
@@ -31,34 +14,18 @@ class TargetTab:
         tk.Frame(hdr, bg=SURF0, height=1).pack(side="bottom", fill="x")
 
         tk.Label(hdr, text="Dateiname", bg=MANTLE, fg=DIM,
-                 font=FONT_HDR, width=28, anchor="w").pack(side="left")
+                 font=FONT_HDR_SMALL, width=28, anchor="w").pack(side="left")
         tk.Label(hdr, text="Priorität", bg=MANTLE, fg=DIM,
-                 font=FONT_HDR, width=10, anchor="w").pack(side="left")
+                 font=FONT_HDR_SMALL, width=10, anchor="w").pack(side="left")
         tk.Label(hdr, text="", bg=MANTLE, width=4).pack(side="left")
 
-        # Scrollable list
         # Add button — must be packed BEFORE canvas to claim bottom space
         btn_frame = tk.Frame(parent, bg=MANTLE, pady=10)
         btn_frame.pack(side="bottom", fill="x")
         tk.Frame(btn_frame, bg=SURF0, height=1).pack(side="top", fill="x")
 
-        canvas    = tk.Canvas(parent, bg=BASE, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        self._list_frame = tk.Frame(canvas, bg=BASE)
-
-        self._list_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self._list_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        def _scroll(e):
-            canvas.yview_scroll(-1 * (e.delta // 120), "units")
-        canvas.bind("<MouseWheel>", _scroll)
-        self._list_frame.bind("<MouseWheel>", _scroll)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        sf = ScrollableFrame(parent)
+        self._list_frame = sf.inner
 
         add_btn = tk.Button(
             btn_frame, text="＋  Target hinzufügen",
@@ -66,9 +33,9 @@ class TargetTab:
             bg=BLUE, fg=CRUST,
             font=FONT_BOLD, relief="flat",
             padx=16, pady=7, cursor="hand2",
-            activebackground=_lighten(BLUE), activeforeground=CRUST, bd=0)
+            activebackground=lighten(BLUE), activeforeground=CRUST, bd=0)
         add_btn.pack(pady=(8, 2))
-        add_btn.bind("<Enter>", lambda e: add_btn.config(bg=_lighten(BLUE)))
+        add_btn.bind("<Enter>", lambda e: add_btn.config(bg=lighten(BLUE)))
         add_btn.bind("<Leave>", lambda e: add_btn.config(bg=BLUE))
 
         self._rows: list = []
@@ -95,9 +62,9 @@ class TargetTab:
             bg=RED, fg=CRUST,
             font=("Segoe UI", 9, "bold"), relief="flat",
             padx=8, pady=4, cursor="hand2",
-            activebackground=_lighten(RED), activeforeground=CRUST, bd=0)
+            activebackground=lighten(RED), activeforeground=CRUST, bd=0)
         del_btn.pack(side="left")
-        del_btn.bind("<Enter>", lambda e: del_btn.config(bg=_lighten(RED)))
+        del_btn.bind("<Enter>", lambda e: del_btn.config(bg=lighten(RED)))
         del_btn.bind("<Leave>", lambda e: del_btn.config(bg=RED))
 
         self._rows.append((fn_var, prio_var, row))

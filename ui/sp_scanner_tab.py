@@ -3,40 +3,10 @@ from tkinter import ttk
 import threading
 import time
 
-BASE   = "#1e1e2e"
-MANTLE = "#181825"
-SURF0  = "#313244"
-SURF1  = "#45475a"
-TEXT   = "#cdd6f4"
-DIM    = "#7f849c"
-BLUE   = "#89b4fa"
-GREEN  = "#a6e3a1"
-RED    = "#f38ba8"
-ORANGE = "#fab387"
-YELLOW = "#f9e2af"
-MAUVE  = "#cba6f7"
-
-FONT_UI    = ("Segoe UI", 10)
-FONT_BOLD  = ("Segoe UI", 10, "bold")
-FONT_MONO  = ("Consolas", 9)
-FONT_SMALL = ("Segoe UI", 8)
-FONT_HDR   = ("Segoe UI", 9, "bold")
-FONT_BIG   = ("Segoe UI", 22, "bold")
-FONT_MED   = ("Segoe UI", 13, "bold")
-FONT_LABEL = ("Segoe UI", 8)
-
-
-def _fmt(value: float) -> str:
-    """Format a number with K/M/B/T suffix."""
-    if value >= 1e12:
-        return f"{value / 1e12:.3f} T"
-    if value >= 1e9:
-        return f"{value / 1e9:.3f} B"
-    if value >= 1e6:
-        return f"{value / 1e6:.3f} M"
-    if value >= 1e3:
-        return f"{value / 1e3:.3f} K"
-    return f"{value:,.2f}"
+from bot.memory_reader import format_sp
+from ui.theme import (BASE, SURF0, TEXT, DIM, BLUE, GREEN, RED, ORANGE, YELLOW, MAUVE,
+                      FONT_UI, FONT_BOLD, FONT_SMALL, FONT_LABEL, FONT_MED, FONT_BIG,
+                      ScrollableFrame)
 
 
 def _fmt_duration(seconds: float) -> str:
@@ -45,19 +15,6 @@ def _fmt_duration(seconds: float) -> str:
     if h:
         return f"{h:02d}:{m:02d}:{s:02d}"
     return f"{m:02d}:{s:02d}"
-
-
-class _StatCard(tk.Frame):
-    """A single statistic card with a label and a value."""
-    def __init__(self, parent, label: str, color: str = TEXT, wide: bool = False):
-        super().__init__(parent, bg=SURF0, padx=16, pady=12)
-        tk.Label(self, text=label, bg=SURF0, fg=DIM, font=FONT_LABEL).pack(anchor="w")
-        self._var = tk.StringVar(value="—")
-        tk.Label(self, textvariable=self._var, bg=SURF0, fg=color,
-                 font=FONT_MED if not wide else FONT_BIG).pack(anchor="w", pady=(2, 0))
-
-    def set(self, text: str):
-        self._var.set(text)
 
 
 class SpScannerTab:
@@ -85,21 +42,8 @@ class SpScannerTab:
     # ------------------------------------------------------------------ UI --
 
     def _build_ui(self, parent):
-        canvas    = tk.Canvas(parent, bg=BASE, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        self._inner = tk.Frame(canvas, bg=BASE)
-
-        self._inner.bind("<Configure>",
-                         lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self._inner, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        def _scroll(e):
-            canvas.yview_scroll(-1 * (e.delta // 120), "units")
-        canvas.bind("<MouseWheel>", _scroll)
-        self._inner.bind("<MouseWheel>", _scroll)
+        sf = ScrollableFrame(parent)
+        self._inner = sf.inner
 
         # ── Header ──────────────────────────────────────────────────────────
         hdr = tk.Frame(self._inner, bg=BASE)
@@ -282,7 +226,7 @@ class SpScannerTab:
             self._parent.after(0, lambda: self._set_status(msg))
             return
 
-        self._log_fn(f"[SP] Suche Adresse für SP-Bereich {_fmt(sp_min)} – {_fmt(sp_max)}...")
+        self._log_fn(f"[SP] Suche Adresse für SP-Bereich {format_sp(sp_min)} – {format_sp(sp_max)}...")
         self._memory = GameMemory(hwnd)
 
         if self._stop_flag.is_set():
@@ -354,7 +298,7 @@ class SpScannerTab:
         self._sp_data["value"] = best[2]
 
         def init_cards():
-            self._card_current.set(_fmt(best[2]))
+            self._card_current.set(format_sp(best[2]))
             self._card_farmed.set("0")
             self._card_time.set("00:00")
             self._card_per_min.set("0")
@@ -416,11 +360,11 @@ class SpScannerTab:
 
         rate_per_hour = rate_per_min * 60
 
-        self._card_current.set(_fmt(v_now))
-        self._card_farmed.set(_fmt(farmed) if farmed >= 1 else "0")
+        self._card_current.set(format_sp(v_now))
+        self._card_farmed.set(format_sp(farmed) if farmed >= 1 else "0")
         self._card_time.set(_fmt_duration(elapsed))
-        self._card_per_min.set(_fmt(rate_per_min) if rate_per_min >= 1 else "0")
-        self._card_per_hour.set(_fmt(rate_per_hour) if rate_per_hour >= 1 else "0")
+        self._card_per_min.set(format_sp(rate_per_min) if rate_per_min >= 1 else "0")
+        self._card_per_hour.set(format_sp(rate_per_hour) if rate_per_hour >= 1 else "0")
 
         self._parent.after(1000, self._live_update_loop)
 

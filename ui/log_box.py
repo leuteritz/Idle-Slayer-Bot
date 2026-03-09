@@ -4,25 +4,9 @@ import time
 import tkinter as tk
 from tkinter import scrolledtext, ttk
 
-BASE   = "#1e1e2e"
-MANTLE = "#181825"
-CRUST  = "#11111b"
-SURF0  = "#313244"
-TEXT   = "#cdd6f4"
-DIM    = "#45475a"
-BLUE   = "#89b4fa"
-GREEN  = "#a6e3a1"
-ORANGE = "#fab387"
-RED    = "#f38ba8"
-
-FONT_UI   = ("Segoe UI", 10)
-FONT_BOLD = ("Segoe UI", 10, "bold")
-
-
-def _lighten(hex_color: str, amount: int = 20) -> str:
-    h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"#{min(255, r+amount):02x}{min(255, g+amount):02x}{min(255, b+amount):02x}"
+from ui.theme import (BASE, MANTLE, CRUST, SURF0, TEXT, DIM,
+                      BLUE, GREEN, ORANGE, RED,
+                      FONT_UI, FONT_BOLD, FONT_MONO, lighten)
 
 
 class QueueStream(io.TextIOBase):
@@ -56,16 +40,16 @@ class LogBox:
             bg=SURF0, fg=TEXT,
             font=("Segoe UI", 8), relief="flat",
             padx=10, pady=3, cursor="hand2",
-            activebackground=_lighten(SURF0), activeforeground=TEXT, bd=0)
+            activebackground=lighten(SURF0), activeforeground=TEXT, bd=0)
         clr_btn.pack(side="right")
-        clr_btn.bind("<Enter>", lambda e: clr_btn.config(bg=_lighten(SURF0)))
+        clr_btn.bind("<Enter>", lambda e: clr_btn.config(bg=lighten(SURF0)))
         clr_btn.bind("<Leave>", lambda e: clr_btn.config(bg=SURF0))
 
         # Log text
         self._box = scrolledtext.ScrolledText(
             outer, height=9,
             bg=CRUST, fg=TEXT,
-            font=("Consolas", 9),
+            font=FONT_MONO,
             state="disabled", relief="flat", bd=0,
             insertbackground=TEXT,
             selectbackground=SURF0, selectforeground=TEXT,

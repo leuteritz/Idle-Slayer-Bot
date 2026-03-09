@@ -24,6 +24,7 @@ class IdleSlayerBot:
         self.window     = GameWindow(bot_config.game_title)
         self.last_d_key = 0
         self.last_r_key = 0
+        self.last_jump  = 0
 
         self.targets = sorted(
             [Target(t.filename, t.priority, bot_config.confidence_threshold)
@@ -31,10 +32,15 @@ class IdleSlayerBot:
             key=lambda t: t.priority
         )
 
-        self.chest_hunt  = ChestHunt(chest_config, self.window, bot_config.monitor_index) \
+        # Monitor-Offset einmal zentral auflösen
+        with mss.mss() as sct:
+            mon = sct.monitors[bot_config.monitor_index]
+            monitor_info = (mon["left"], mon["top"], bot_config.monitor_index)
+
+        self.chest_hunt  = ChestHunt(chest_config, self.window, monitor_info) \
                            if chest_config.enabled else None
 
-        self.bonus_stage = BonusStage(bonus_config, self.window, bot_config.monitor_index) \
+        self.bonus_stage = BonusStage(bonus_config, self.window, monitor_info) \
                            if bonus_config.enabled else None
 
         self._print_startup()
@@ -61,7 +67,9 @@ class IdleSlayerBot:
             self.window.send_key('r')
             self.last_r_key = now
 
-    def _handle_detection(self, gray_frame: np.ndarray):
+    def _handle_detection(self, gray_frame: np.ndarray, now: float):
+        if now - self.last_jump < self.cfg.cooldown:
+            return
         for target in self.targets:
             match = target.find(gray_frame)
             if match:
@@ -70,6 +78,7 @@ class IdleSlayerBot:
                 self.window.send_key(self.cfg.jump_key, hold_time=self.cfg.space_key_interval)
                 time.sleep(self.cfg.space_key_pause)
                 self.window.send_key(self.cfg.jump_key, hold_time=self.cfg.space_key_interval_fast)
+                self.last_jump = time.time()
                 break
 
     def run(self, stop_event: threading.Event = None,
@@ -104,7 +113,7 @@ class IdleSlayerBot:
 
                     self._handle_d_key(now)
                     self._handle_r_key(now)
-                    self._handle_detection(gray)
+                    self._handle_detection(gray, now)
                     time.sleep(self.cfg.check_interval)
 
             except pyautogui.FailSafeException as e:

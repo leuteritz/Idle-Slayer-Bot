@@ -1,4 +1,3 @@
-from bot.bot import IdleSlayerBot
 from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig, TargetConfig
 from ui.config_ui import ConfigUI
 
@@ -42,20 +41,10 @@ target_configs = [
     TargetConfig("bat.png",    1),
     TargetConfig("dragon.png", 1),
     TargetConfig("eagle.png",  1),
+    TargetConfig("flame.png",  1),
     TargetConfig("coin.png",   2),
 ]
 
 if __name__ == "__main__":
     ui = ConfigUI(bot_config, chest_config, bonus_config, target_configs)
-    confirmed = ui.show()
-
-    if not confirmed:
-        print("Abgebrochen.")
-    else:
-        print("Skript startet...")
-        IdleSlayerBot(
-            bot_config    = ui.bot_config,
-            target_configs= ui.target_configs,
-            chest_config  = ui.chest_config,
-            bonus_config  = ui.bonus_config,
-        ).run()
+    ui.show()

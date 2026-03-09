@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
+import mss
 import os
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ENEMIES_DIR   = os.path.join(_PROJECT_ROOT, "assets", "enemies")
+_PROJECT_ROOT  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ENEMIES_DIR    = os.path.join(_PROJECT_ROOT, "assets", "enemies")
+MINIGAMES_DIR  = os.path.join(_PROJECT_ROOT, "assets", "minigames")
 
 
 class TemplateMatcher:
@@ -16,6 +18,13 @@ class TemplateMatcher:
         if image is None:
             raise FileNotFoundError(f"Template '{path}' nicht gefunden!")
         return image
+
+    @staticmethod
+    def grab_gray(sct, monitor_idx: int) -> np.ndarray:
+        monitor    = sct.monitors[monitor_idx]
+        screenshot = sct.grab(monitor)
+        frame      = np.array(screenshot)
+        return cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
 
     def _find_one(self, gray_frame: np.ndarray, template: np.ndarray, confidence: float):
         result = cv2.matchTemplate(gray_frame, template, cv2.TM_CCOEFF_NORMED)

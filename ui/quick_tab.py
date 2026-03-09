@@ -1,18 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
-BASE   = "#1e1e2e"
-MANTLE = "#181825"
-SURF0  = "#313244"
-SURF1  = "#45475a"
-TEXT   = "#cdd6f4"
-DIM    = "#7f849c"
-BLUE   = "#89b4fa"
-
-FONT_UI   = ("Segoe UI", 10)
-FONT_BOLD = ("Segoe UI", 10, "bold")
-FONT_SMALL = ("Segoe UI", 8)
-FONT_HDR  = ("Segoe UI", 9, "bold")
+from ui.theme import (BASE, SURF0, TEXT, DIM, BLUE,
+                      FONT_UI, FONT_BOLD, FONT_SMALL, ScrollableFrame)
 
 # (section, field_name, label, description)
 QUICK_FIELDS = [
@@ -23,10 +13,10 @@ QUICK_FIELDS = [
     ("bot",   "confidence_threshold",    "Erkennungs-Confidence",  "Mindestwert für Gegner-Erkennung (0–1)"),
     ("bot",   "space_key_interval",      "Sprung halten (s)",      "Wie lange Leertaste beim 1. Druck"),
     ("bot",   "space_key_interval_fast", "Sprung kurz (s)",        "Wie lange beim 2. schnellen Druck"),
-    ("chest", "confidence",              "Chest Confidence",       "Mindestwert für Kisten-Erkennung"),
+    ("chest", "confidence",              "Kisten-Confidence",      "Mindestwert für Kisten-Erkennung"),
     ("chest", "wait_per_chest",          "Wartezeit / Kiste (s)",  "Pause nach jedem Kisten-Klick"),
     ("bonus", "jump_interval",           "Bonus: Sprung alle (s)", "Sprungintervall im Bonus Stage"),
-    ("bonus", "confidence",              "Bonus Confidence",       "Mindestwert für Bonus Stage Erkennung"),
+    ("bonus", "confidence",              "Bonus-Confidence",       "Mindestwert für Bonus Stage Erkennung"),
 ]
 
 _SECTION_LABELS = {
@@ -38,21 +28,8 @@ _SECTION_LABELS = {
 
 class QuickTab:
     def __init__(self, parent, configs: dict, entries: dict):
-        canvas    = tk.Canvas(parent, bg=BASE, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        inner     = tk.Frame(canvas, bg=BASE)
-
-        inner.bind("<Configure>",
-                   lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=inner, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        def _scroll(e):
-            canvas.yview_scroll(-1 * (e.delta // 120), "units")
-        canvas.bind("<MouseWheel>", _scroll)
-        inner.bind("<MouseWheel>", _scroll)
+        sf = ScrollableFrame(parent)
+        inner = sf.inner
 
         last_section = None
         row = 0
@@ -105,8 +82,8 @@ class QuickTab:
             else:
                 ttk.Entry(card, textvariable=var, width=10).pack(side="right", padx=(8, 0))
 
-            card.bind("<MouseWheel>", _scroll)
-            label_col.bind("<MouseWheel>", _scroll)
+            card.bind("<MouseWheel>", sf.scroll_handler)
+            label_col.bind("<MouseWheel>", sf.scroll_handler)
 
             row += 1
 
