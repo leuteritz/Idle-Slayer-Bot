@@ -7,6 +7,7 @@ import ctypes
 from ctypes import wintypes
 from dataclasses import fields
 import json
+import os
 import win32con
 from PIL import Image, ImageTk
 
@@ -78,6 +79,7 @@ class ConfigUI:
         self._key_data = {"d": 0, "r": 0, "w": 0,
                           "chest_hunts": 0, "chests_opened": 0, "mimics": 0}
 
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("leuteritz.idleslayerbot.1")
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
         self.root.resizable(True, True)
@@ -85,8 +87,9 @@ class ConfigUI:
         self.root.configure(bg=BASE)
         # Fenster-Icon (Taskleiste + Titelzeile)
         try:
-            self._win_icon = tk.PhotoImage(file="assets/icon.png")
-            self.root.iconphoto(True, self._win_icon)
+            ico_path = os.path.join(os.environ.get("TEMP", "."), "idleslayerbot.ico")
+            Image.open("assets/icon.png").save(ico_path, format="ICO")
+            self.root.iconbitmap(ico_path)
         except Exception:
             pass
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
