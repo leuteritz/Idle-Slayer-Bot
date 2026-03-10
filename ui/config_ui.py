@@ -52,7 +52,6 @@ NAV_ITEMS = [
     ("bot",     "🤖", "Bot"),
     ("chest",   "📦", "Chest Hunt"),
     ("bonus",   "⭐", "Bonus Stage"),
-    ("scanner", "📊", "SP Statistik"),
 ]
 
 
@@ -73,6 +72,7 @@ class ConfigUI:
         self._paused      = False
         self._entries     = {}
         self._active_page = None
+        self._prev_page   = None  # for toggling back from scanner
         self._nav_refs    = {}   # page_name -> (frame, inner, lbl)
         self._hotkey_thread: _HotkeyThread = None
         self._sp_data  = {"value": None, "session_start": None}
@@ -151,15 +151,48 @@ class ConfigUI:
                                     font=FONT_UI)
         self._status_lbl.pack(side="left")
 
-        # SP pill – zweizeilig
-        sp_badge = tk.Frame(inner, bg=SURF0, padx=14, pady=6)
+        # SP pill – zweizeilig, klickbar → öffnet Scanner-Seite
+        sp_badge = tk.Frame(inner, bg=SURF0, padx=14, pady=6, cursor="hand2")
         sp_badge.pack(side="right", padx=(0, 10))
-        self._sp_label = tk.Label(sp_badge, text="SP: ---", bg=SURF0,
-                                  fg=DIM, font=FONT_UI)
+        self._sp_badge = sp_badge
+
+        # Linke Seite: SP-Texte
+        sp_text = tk.Frame(sp_badge, bg=SURF0, cursor="hand2")
+        sp_text.pack(side="left")
+        self._sp_text_frame = sp_text
+
+        self._sp_label = tk.Label(sp_text, text="SP: ---", bg=SURF0,
+                                  fg=DIM, font=FONT_UI, cursor="hand2")
         self._sp_label.pack(anchor="w")
-        self._sp_session_label = tk.Label(sp_badge, text="", bg=SURF0,
-                                          fg=DIM, font=FONT_SMALL)
+        self._sp_session_label = tk.Label(sp_text, text="", bg=SURF0,
+                                          fg=DIM, font=FONT_SMALL, cursor="hand2")
         self._sp_session_label.pack(anchor="w")
+
+        # Rechte Seite: Chevron als Navigationshinweis
+        self._sp_chevron = tk.Label(sp_badge, text="\u203a", bg=SURF0, fg=DIM,
+                                    font=("SF Pro Display", 16), cursor="hand2")
+        self._sp_chevron.pack(side="right", padx=(8, 0))
+
+        # Hover-Effekt
+        def _sp_hover_enter(e):
+            bg = lighten(SURF1, 10) if self._active_page == "scanner" else SURF1
+            for w in (sp_badge, sp_text, self._sp_label,
+                      self._sp_session_label, self._sp_chevron):
+                w.config(bg=bg)
+            self._sp_chevron.config(fg=TEXT)
+
+        def _sp_hover_leave(e):
+            bg = SURF1 if self._active_page == "scanner" else SURF0
+            for w in (sp_badge, sp_text, self._sp_label,
+                      self._sp_session_label, self._sp_chevron):
+                w.config(bg=bg)
+            self._sp_chevron.config(fg=TEXT if self._active_page == "scanner" else DIM)
+
+        for w in (sp_badge, sp_text, self._sp_label,
+                  self._sp_session_label, self._sp_chevron):
+            w.bind("<Button-1>", lambda e: self._toggle_scanner_page())
+            w.bind("<Enter>", _sp_hover_enter)
+            w.bind("<Leave>", _sp_hover_leave)
 
     def _build_body(self):
         body = tk.Frame(self.root, bg=BASE)
@@ -254,24 +287,47 @@ class ConfigUI:
             w.bind("<Leave>",    on_leave)
             w.bind("<Button-1>", on_click)
 
+    def _toggle_scanner_page(self):
+        if self._active_page == "scanner":
+            # Zurück zur vorherigen Seite
+            self._show_page(self._prev_page or "quick")
+        else:
+            self._prev_page = self._active_page
+            self._show_page("scanner")
+
+    def _update_sp_pill_highlight(self):
+        """Highlight SP pill when scanner page is active."""
+        bg = SURF1 if self._active_page == "scanner" else SURF0
+        for w in (self._sp_badge, self._sp_text_frame,
+                  self._sp_label, self._sp_session_label, self._sp_chevron):
+            w.config(bg=bg)
+        self._sp_chevron.config(fg=TEXT if self._active_page == "scanner" else DIM)
+
     def _show_page(self, page_name: str):
+        # Deactivate old nav highlight
         if self._active_page and self._active_page in self._nav_refs:
             frame, inner, lbl, icon_lbl = self._nav_refs[self._active_page]
             for w in (frame, inner): w.config(bg=MANTLE)
             lbl.config(bg=MANTLE, fg=DIM)
             icon_lbl.config(bg=MANTLE, fg=DIM)
-            if self._active_page in self._pages:
-                self._pages[self._active_page].pack_forget()
+        # Hide old page
+        if self._active_page and self._active_page in self._pages:
+            self._pages[self._active_page].pack_forget()
 
         self._active_page = page_name
-        frame, inner, lbl, icon_lbl = self._nav_refs[page_name]
-        # Apple-style: subtle fill + blue text for active nav item
-        for w in (frame, inner): w.config(bg=SURF0)
-        lbl.config(bg=SURF0, fg=BLUE)
-        icon_lbl.config(bg=SURF0, fg=BLUE)
+
+        # Activate new nav highlight (only if page has a sidebar entry)
+        if page_name in self._nav_refs:
+            frame, inner, lbl, icon_lbl = self._nav_refs[page_name]
+            # Apple-style: subtle fill + blue text for active nav item
+            for w in (frame, inner): w.config(bg=SURF0)
+            lbl.config(bg=SURF0, fg=BLUE)
+            icon_lbl.config(bg=SURF0, fg=BLUE)
 
         if page_name in self._pages:
             self._pages[page_name].pack(fill="both", expand=True)
+
+        self._update_sp_pill_highlight()
 
     def _build_log(self):
         tk.Frame(self.root, bg=SEPARATOR, height=1).pack(fill="x")
