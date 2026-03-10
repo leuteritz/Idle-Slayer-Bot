@@ -9,10 +9,11 @@ from bot.config import ChestHuntConfig
 
 class ChestHunt(TemplateMatcher):
     def __init__(self, config: ChestHuntConfig, game_window,
-                 monitor_info: tuple):
+                 monitor_info: tuple, key_data: dict = None):
         self.config      = config
         self.game_window = game_window
         self._active     = False
+        self._key_data   = key_data if key_data is not None else {}
 
         self.template       = self._load_template(config.template,              MINIGAMES_DIR)
         self.panic_template = self._load_template(config.panic_button_template, MINIGAMES_DIR)
@@ -31,6 +32,7 @@ class ChestHunt(TemplateMatcher):
             cx, cy, conf, tw, th = match
             print(f"  [!] Panic-Button bei ({cx}, {cy}) | Conf: {conf:.2f} – Drücke Knopf!")
             self._click_on_monitor(cx, cy)
+            self._key_data["mimics"] = self._key_data.get("mimics", 0) + 1
             time.sleep(1.0)
             self._active = False
             return True
@@ -52,6 +54,7 @@ class ChestHunt(TemplateMatcher):
         if not self._active:
             print(f"[ChestHunt] Gestartet! {len(chests)}/{expected} Kisten – öffne alle...")
             self._active = True
+            self._key_data["chest_hunts"] = self._key_data.get("chest_hunts", 0) + 1
 
         chests_sorted = sorted(chests, key=lambda c: (c[1], c[0]))
 
@@ -68,6 +71,7 @@ class ChestHunt(TemplateMatcher):
 
                 print(f"  Kiste {i+1}/{len(chests_sorted)} bei ({cx}, {cy}) – klicke...")
                 self._click_on_monitor(cx, cy)
+                self._key_data["chests_opened"] = self._key_data.get("chests_opened", 0) + 1
 
                 waited = 0.0
                 while waited < self.config.wait_per_chest:

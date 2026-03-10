@@ -33,7 +33,8 @@ class IdleSlayerBot:
             mon = sct.monitors[bot_config.monitor_index]
             monitor_info = (mon["left"], mon["top"], bot_config.monitor_index)
 
-        self.chest_hunt  = ChestHunt(chest_config, self.window, monitor_info) \
+        self.chest_hunt  = ChestHunt(chest_config, self.window, monitor_info,
+                                     key_data=self._key_data) \
                            if chest_config.enabled else None
 
         self.bonus_stage = BonusStage(bonus_config, self.window, monitor_info) \

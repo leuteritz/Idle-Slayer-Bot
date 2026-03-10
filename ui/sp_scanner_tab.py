@@ -105,6 +105,25 @@ class SpScannerTab:
         self._card_r_key = self._make_key_card(key_stats, "R-TASTE", ORANGE, 1)
         self._card_w_key = self._make_key_card(key_stats, "W-TASTE", BLUE,   2)
 
+        # Trennlinie
+        tk.Frame(self._inner, bg=SEPARATOR, height=1).pack(fill="x", padx=24, pady=(4, 14))
+
+        # Chest Hunt Statistik
+        ch_hdr = tk.Frame(self._inner, bg=BASE)
+        ch_hdr.pack(fill="x", padx=24, pady=(0, 8))
+        tk.Label(ch_hdr, text="Chest Hunt Statistik",
+                 bg=BASE, fg=TEXT, font=FONT_BOLD).pack(side="left")
+
+        ch_stats = tk.Frame(self._inner, bg=BASE)
+        ch_stats.pack(fill="x", padx=24, pady=(0, 16))
+        ch_stats.columnconfigure(0, weight=1)
+        ch_stats.columnconfigure(1, weight=1)
+        ch_stats.columnconfigure(2, weight=1)
+
+        self._card_chest_hunts  = self._make_key_card(ch_stats, "CHEST HUNTS",     MAUVE,  0)
+        self._card_chests_opened = self._make_key_card(ch_stats, "KISTEN GEÖFFNET", YELLOW, 1)
+        self._card_mimics       = self._make_key_card(ch_stats, "MIMIKS",           RED,    2)
+
         self._parent.after(1000, self._key_poll_loop)
 
     def _make_key_card(self, parent, label: str, color: str, col: int):
@@ -178,6 +197,9 @@ class SpScannerTab:
         self._card_d_key.set(str(self._key_data.get("d", 0)))
         self._card_r_key.set(str(self._key_data.get("r", 0)))
         self._card_w_key.set(str(self._key_data.get("w", 0)))
+        self._card_chest_hunts.set(str(self._key_data.get("chest_hunts", 0)))
+        self._card_chests_opened.set(str(self._key_data.get("chests_opened", 0)))
+        self._card_mimics.set(str(self._key_data.get("mimics", 0)))
         self._parent.after(1000, self._key_poll_loop)
 
     def _reset_cards(self):

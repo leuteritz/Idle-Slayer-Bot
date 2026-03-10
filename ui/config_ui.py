@@ -75,7 +75,8 @@ class ConfigUI:
         self._nav_refs    = {}   # page_name -> (frame, inner, lbl)
         self._hotkey_thread: _HotkeyThread = None
         self._sp_data  = {"value": None, "session_start": None}
-        self._key_data = {"d": 0, "r": 0, "w": 0}
+        self._key_data = {"d": 0, "r": 0, "w": 0,
+                          "chest_hunts": 0, "chests_opened": 0, "mimics": 0}
 
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
@@ -489,6 +490,9 @@ class ConfigUI:
         self._key_data["d"] = 0
         self._key_data["r"] = 0
         self._key_data["w"] = 0
+        self._key_data["chest_hunts"] = 0
+        self._key_data["chests_opened"] = 0
+        self._key_data["mimics"] = 0
 
         from bot.bot import IdleSlayerBot
         bot = IdleSlayerBot(self.bot_config,
