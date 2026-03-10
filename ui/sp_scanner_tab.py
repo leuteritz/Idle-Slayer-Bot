@@ -95,6 +95,13 @@ class SpScannerTab:
         tk.Label(key_hdr, text="Session Tastenzähler",
                  bg=BASE, fg=TEXT, font=FONT_BOLD).pack(side="left")
 
+        reset_btn = tk.Label(key_hdr, text="↺ Zurücksetzen", bg=SURF0, fg=DIM,
+                             font=FONT_SMALL, padx=8, pady=2, cursor="hand2")
+        reset_btn.pack(side="right")
+        reset_btn.bind("<Button-1>", lambda e: self.reset_stats())
+        reset_btn.bind("<Enter>", lambda e: reset_btn.config(bg=lighten(SURF0, 0.1), fg=TEXT))
+        reset_btn.bind("<Leave>", lambda e: reset_btn.config(bg=SURF0, fg=DIM))
+
         key_stats = tk.Frame(self._inner, bg=BASE)
         key_stats.pack(fill="x", padx=24, pady=(0, 16))
         key_stats.columnconfigure(0, weight=1)
@@ -371,6 +378,30 @@ class SpScannerTab:
         self._card_per_hour.set(format_sp(rate_per_hour) if rate_per_hour >= 1 else "0")
 
         self._parent.after(1000, self._live_update_loop)
+
+    def reset_stats(self):
+        """Reset all session statistics to zero."""
+        now = time.time()
+        current_sp = self._sp_data.get("value")
+
+        # Reset key counters
+        for k in ("d", "r", "w", "chest_hunts", "chests_opened", "mimics"):
+            self._key_data[k] = 0
+
+        # Reset SP session tracking
+        self._session_start_time = now
+        self._session_start_sp = current_sp
+        self._sp_data["session_start"] = current_sp
+        self._sp_1min_ago = current_sp
+        self._sp_1min_time = now
+
+        # Reset SP cards
+        self._card_farmed.set("0")
+        self._card_time.set("00:00")
+        self._card_per_min.set("0")
+        self._card_per_hour.set("0")
+
+        self._log_fn("[Stats] Statistiken zurückgesetzt.")
 
     def stop(self):
         """Cleanup when UI closes."""
