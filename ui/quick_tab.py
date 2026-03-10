@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
-from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, ORANGE, SEPARATOR,
-                      FONT_UI, FONT_BOLD, FONT_SMALL, FONT_HDR_SMALL, ScrollableFrame)
+from ui.theme import (BASE, MANTLE, SURF0, TEXT, DIM, BLUE, GREEN, ORANGE, SEPARATOR,
+                      FONT_UI, FONT_BOLD, FONT_SMALL, FONT_HDR_SMALL, ScrollableFrame, lighten)
 
 # Felder die NACH dem Modus-Selector kommen
 QUICK_FIELDS = [
@@ -32,7 +32,7 @@ _MODE2_FIELDS = [
 
 
 class QuickTab:
-    def __init__(self, parent, configs: dict, entries: dict):
+    def __init__(self, parent, configs: dict, entries: dict, sp_var=None, scan_fn=None):
         sf = ScrollableFrame(parent)
         inner = sf.inner
         self._inner = inner
@@ -43,10 +43,44 @@ class QuickTab:
         row = 0
         inner.columnconfigure(0, weight=1)
 
+        # ── Current SP Eingabe ───────────────────────────────
+        if sp_var is not None:
+            sp_card = tk.Frame(inner, bg=MANTLE, padx=16, pady=14)
+            sp_card.grid(row=row, column=0, columnspan=2,
+                         sticky="ew", padx=20, pady=(20, 2))
+            sp_card.bind("<MouseWheel>", sf.scroll_handler)
+
+            # Titel + Beschreibung (volle Breite)
+            tk.Label(sp_card, text="Current SP", bg=MANTLE, fg=TEXT,
+                     font=FONT_UI, anchor="w").pack(anchor="w")
+            tk.Label(sp_card, text="Aktuelle Slayer Points für den SP-Scanner",
+                     bg=MANTLE, fg=DIM, font=FONT_SMALL, anchor="w").pack(anchor="w")
+
+            # Eingabe-Zeile: Entry links, Button rechts
+            input_row = tk.Frame(sp_card, bg=MANTLE)
+            input_row.pack(fill="x", pady=(10, 0))
+            input_row.bind("<MouseWheel>", sf.scroll_handler)
+            ttk.Entry(input_row, textvariable=sp_var, width=20).pack(side="left")
+            if scan_fn is not None:
+                _g = GREEN
+                btn = tk.Button(input_row, text="Scan starten", command=scan_fn,
+                                bg=_g, fg=BASE, font=FONT_BOLD, relief="flat",
+                                padx=14, pady=5, cursor="hand2",
+                                activebackground=lighten(_g), activeforeground=BASE, bd=0)
+                btn.bind("<Enter>", lambda e, b=btn: b.config(bg=lighten(_g)))
+                btn.bind("<Leave>", lambda e, b=btn: b.config(bg=_g))
+                btn.pack(side="right")
+
+            # Hint unter dem Entry
+            tk.Label(sp_card, text="z.B. 14.2 M, 500 K, 1.2 B, 3.5 T",
+                     bg=MANTLE, fg=DIM, font=FONT_SMALL, anchor="w").pack(
+                anchor="w", pady=(4, 0))
+            row += 1
+
         # ── Bot Header ───────────────────────────────────────
         hdr_frame = tk.Frame(inner, bg=BASE)
         hdr_frame.grid(row=row, column=0, columnspan=2,
-                       sticky="w", padx=20, pady=(20, 8))
+                       sticky="w", padx=20, pady=(sp_var is None and 20 or 12, 8))
         tk.Label(hdr_frame, text="🤖  Bot",
                  bg=BASE, fg=TEXT, font=FONT_HDR_SMALL).pack(side="left")
         row += 1

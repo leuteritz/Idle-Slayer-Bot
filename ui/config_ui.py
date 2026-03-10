@@ -51,7 +51,7 @@ NAV_ITEMS = [
     ("bot",     "🤖", "Bot"),
     ("chest",   "📦", "Chest Hunt"),
     ("bonus",   "⭐", "Bonus Stage"),
-    ("scanner", "📊", "SP Scanner"),
+    ("scanner", "📊", "SP Statistik"),
 ]
 
 
@@ -74,7 +74,8 @@ class ConfigUI:
         self._active_page = None
         self._nav_refs    = {}   # page_name -> (frame, inner, lbl)
         self._hotkey_thread: _HotkeyThread = None
-        self._sp_data  = {"value": None}
+        self._sp_data  = {"value": None, "session_start": None}
+        self._key_data = {"d": 0, "r": 0, "w": 0}
 
         self.root = tk.Tk()
         self.root.title("Idle Slayer Bot")
@@ -146,12 +147,15 @@ class ConfigUI:
                                     font=FONT_UI)
         self._status_lbl.pack(side="left")
 
-        # SP pill
+        # SP pill – zweizeilig
         sp_badge = tk.Frame(inner, bg=SURF0, padx=14, pady=6)
         sp_badge.pack(side="right", padx=(0, 10))
         self._sp_label = tk.Label(sp_badge, text="SP: ---", bg=SURF0,
                                   fg=DIM, font=FONT_UI)
-        self._sp_label.pack()
+        self._sp_label.pack(anchor="w")
+        self._sp_session_label = tk.Label(sp_badge, text="", bg=SURF0,
+                                          fg=DIM, font=FONT_SMALL)
+        self._sp_session_label.pack(anchor="w")
 
     def _build_body(self):
         body = tk.Frame(self.root, bg=BASE)
@@ -183,8 +187,11 @@ class ConfigUI:
         tk.Label(sidebar, text="© Leuteritz", bg=MANTLE, fg="#8E8E93",
                  font=("SF Pro Display", 12)).pack(side="bottom", pady=(0, 10))
 
+        self._sp_input_var = tk.StringVar(value="")
+
         p = tk.Frame(self._content, bg=BASE)
-        QuickTab(p, configs, self._entries)
+        QuickTab(p, configs, self._entries, sp_var=self._sp_input_var,
+                 scan_fn=lambda: self._sp_scanner_tab._on_scan())
         self._pages["quick"] = p
 
         for key, cfg in [("bot",   self.bot_config),
@@ -197,7 +204,8 @@ class ConfigUI:
         p = tk.Frame(self._content, bg=BASE)
         self._sp_scanner_tab = SpScannerTab(
             p, self.bot_config.game_title, self._sp_data,
-            log_fn=self._log_queue.put)
+            log_fn=self._log_queue.put, key_data=self._key_data,
+            sp_var=self._sp_input_var)
         self._pages["scanner"] = p
 
         self._show_page("quick")
@@ -423,9 +431,20 @@ class ConfigUI:
         if self._running and hasattr(self, "_bot_thread") and not self._bot_thread.is_alive():
             self._on_bot_crashed("THREAD_DEAD", "Bot-Thread unerwartet beendet.")
         sp = self._sp_data.get("value")
+        sp_start = self._sp_data.get("session_start")
         if sp is not None:
             from bot.memory_reader import format_sp
             self._sp_label.configure(text=f"SP: {format_sp(sp)}", fg=GREEN)
+            if sp_start is not None and sp_start > 0:
+                farmed = max(0.0, sp - sp_start)
+                pct = farmed / sp_start * 100
+                self._sp_session_label.configure(
+                    text=f"+{format_sp(farmed)}  +{pct:.1f}%", fg=GREEN)
+            else:
+                self._sp_session_label.configure(text="", fg=DIM)
+        else:
+            self._sp_label.configure(text="SP: ---", fg=DIM)
+            self._sp_session_label.configure(text="", fg=DIM)
         self.root.after(100, self._poll_log)
 
     # ── Status ────────────────────────────────────────────────
@@ -467,9 +486,14 @@ class ConfigUI:
         self._hotkey_thread = _HotkeyThread(self._toggle_pause)
         self._hotkey_thread.start()
 
+        self._key_data["d"] = 0
+        self._key_data["r"] = 0
+        self._key_data["w"] = 0
+
         from bot.bot import IdleSlayerBot
         bot = IdleSlayerBot(self.bot_config,
-                            self.chest_config, self.bonus_config)
+                            self.chest_config, self.bonus_config,
+                            key_data=self._key_data)
 
         self._bot_thread = threading.Thread(
             target=bot.run,

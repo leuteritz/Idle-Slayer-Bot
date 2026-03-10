@@ -14,17 +14,19 @@ from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig
 class IdleSlayerBot:
     def __init__(self, bot_config: BotConfig,
                  chest_config: ChestHuntConfig,
-                 bonus_config: BonusStageConfig):
+                 bonus_config: BonusStageConfig,
+                 key_data: dict = None):
 
         self.cfg = bot_config
         if bot_config.disable_failsafe:
             pyautogui.FAILSAFE = False
-        self.window     = GameWindow(bot_config.game_title)
-        self.last_d_key = 0
-        self.last_r_key = 0
-        self.last_w_key = 0
-        self._w_count   = 0
+        self.window      = GameWindow(bot_config.game_title)
+        self.last_d_key  = 0
+        self.last_r_key  = 0
+        self.last_w_key  = 0
+        self._w_count    = 0
         self._w_log_time = 0
+        self._key_data   = key_data if key_data is not None else {}
 
         # Monitor-Offset einmal zentral auflösen
         with mss.mss() as sct:
@@ -57,12 +59,14 @@ class IdleSlayerBot:
             print("D gedrückt (Timer)")
             self.window.send_key('d')
             self.last_d_key = now
+            self._key_data["d"] = self._key_data.get("d", 0) + 1
 
     def _handle_r_key(self, now: float):
         if now - self.last_r_key >= self.cfg.r_key_interval:
             print("R gedrückt (Timer)")
             self.window.send_key('r')
             self.last_r_key = now
+            self._key_data["r"] = self._key_data.get("r", 0) + 1
 
     # ── Modus 1: CPS-Spam ────────────────────────────────────
 
@@ -72,6 +76,7 @@ class IdleSlayerBot:
             self.window.rapid_key('w')
             self.last_w_key = now
             self._w_count += 1
+            self._key_data["w"] = self._key_data.get("w", 0) + 1
 
         if now - self._w_log_time >= 1.0:
             if self._w_count > 0:
@@ -93,6 +98,7 @@ class IdleSlayerBot:
             self.window.rapid_key('w')
         print(f"W × {self.cfg.w_short_count} (kurz)")
 
+        self._key_data["w"] = self._key_data.get("w", 0) + 1 + self.cfg.w_short_count
         self.window._unfocus()
 
     # ── Main Loop ────────────────────────────────────────────
