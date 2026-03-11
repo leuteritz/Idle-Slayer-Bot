@@ -3,7 +3,7 @@ import time
 import mss
 import threading
 
-from bot.template_matcher import TemplateMatcher, MINIGAMES_DIR
+from bot.vision.matcher import TemplateMatcher, MINIGAMES_DIR
 from bot.config import ChestHuntConfig
 
 

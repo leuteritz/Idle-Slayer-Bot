@@ -1,7 +1,7 @@
 import threading
 import time
 
-from bot.memory_reader import format_sp
+from bot.memory.format import format_sp
 
 
 def _fmt_duration(seconds: float) -> str:
@@ -97,7 +97,7 @@ class SpScannerLogic:
 
     def _run_scan(self, sp_min: float, sp_max: float):
         import win32gui
-        from bot.memory_reader import GameMemory
+        from bot.memory.reader import MemoryReader
 
         self._schedule(0, lambda: self.on_status("Suche Spielfenster...") if self.on_status else None)
         hwnd = win32gui.FindWindow(None, self._game_title)
@@ -108,7 +108,7 @@ class SpScannerLogic:
             return
 
         self._log_fn(f"[SP] Suche Adresse für SP-Bereich {format_sp(sp_min)} – {format_sp(sp_max)}...")
-        self._memory = GameMemory(hwnd)
+        self._memory = MemoryReader(hwnd)
 
         if self._stop_flag.is_set():
             return

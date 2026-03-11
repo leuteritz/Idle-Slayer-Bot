@@ -5,7 +5,9 @@ import mss
 import threading
 import pyautogui
 
-from bot.game_window import GameWindow
+from bot.window.manager import WindowManager
+from bot.window.input import InputController
+from bot.core.key_handler import KeyHandler
 from bot.minigames.chest_hunt import ChestHunt
 from bot.minigames.bonus_stage import BonusStage
 from bot.config import BotConfig, ChestHuntConfig, BonusStageConfig
@@ -20,13 +22,11 @@ class IdleSlayerBot:
         self.cfg = bot_config
         if bot_config.disable_failsafe:
             pyautogui.FAILSAFE = False
-        self.window      = GameWindow(bot_config.game_title)
-        self.last_d_key  = 0
-        self.last_r_key  = 0
-        self.last_w_key  = 0
-        self._w_count    = 0
-        self._w_log_time = 0
-        self._key_data   = key_data if key_data is not None else {}
+
+        manager     = WindowManager(bot_config.game_title)
+        self.window = InputController(manager)
+        self._key_data    = key_data if key_data is not None else {}
+        self._key_handler = KeyHandler(bot_config, self.window)
 
         # Monitor-Offset einmal zentral auflösen
         with mss.mss() as sct:
@@ -55,59 +55,10 @@ class IdleSlayerBot:
         print(f"Bonus Stage: {'aktiviert' if self.bonus_stage else 'deaktiviert'}")
         print("Läuft... Drücke Ctrl+C oder klicke Beenden zum Stoppen.\n")
 
-    def _handle_d_key(self, now: float):
-        if now - self.last_d_key >= self.cfg.d_key_interval:
-            print("D gedrückt (Timer)")
-            self.window.send_key('d')
-            self.last_d_key = now
-            self._key_data["d"] = self._key_data.get("d", 0) + 1
-
-    def _handle_r_key(self, now: float):
-        if now - self.last_r_key >= self.cfg.r_key_interval:
-            print("R gedrückt (Timer)")
-            self.window.send_key('r')
-            self.last_r_key = now
-            self._key_data["r"] = self._key_data.get("r", 0) + 1
-
-    # ── Modus 1: CPS-Spam ────────────────────────────────────
-
-    def _handle_w_mode1(self, now: float):
-        interval = 1.0 / max(1.0, self.cfg.w_key_cps)
-        if now - self.last_w_key >= interval:
-            self.window.rapid_key('w')
-            self.last_w_key = now
-            self._w_count += 1
-            self._key_data["w"] = self._key_data.get("w", 0) + 1
-
-        if now - self._w_log_time >= 1.0:
-            if self._w_count > 0:
-                print(f"W × {self._w_count}")
-                self._w_count = 0
-            self._w_log_time = now
-
-    # ── Modus 2: 1× Lang + N× Kurz ──────────────────────────
-
-    def _handle_w_mode2(self):
-        self.window._focus()
-
-        # 1× lang drücken
-        self.window.rapid_hold('w', self.cfg.w_hold_time)
-        print(f"W gehalten ({self.cfg.w_hold_time}s)")
-
-        # N× kurz drücken, sofort hintereinander
-        for i in range(self.cfg.w_short_count):
-            self.window.rapid_key('w')
-        print(f"W × {self.cfg.w_short_count} (kurz)")
-
-        self._key_data["w"] = self._key_data.get("w", 0) + 1 + self.cfg.w_short_count
-        self.window._unfocus()
-
-    # ── Main Loop ────────────────────────────────────────────
-
     def run(self, stop_event: threading.Event = None,
                   pause_event: threading.Event = None,
-                  crash_queue = None):
-        self.window._focus()
+                  crash_queue=None):
+        self.window.focus()
 
         with mss.mss() as sct:
             monitor = sct.monitors[self.cfg.monitor_index]
@@ -133,24 +84,24 @@ class IdleSlayerBot:
                         gray       = cv2.cvtColor(frame, cv2.COLOR_BGRA2GRAY)
 
                         if self.bonus_stage and self.bonus_stage.run(gray):
-                            self.last_d_key = time.time()
+                            self._key_handler.last_d_key = time.time()
                             last_scan = now
                             continue
 
                         if self.chest_hunt and self.chest_hunt.run(gray, pause_event=pause_event, stop_event=stop_event):
-                            self.last_d_key = time.time()
+                            self._key_handler.last_d_key = time.time()
                             last_scan = now
                             continue
 
                         last_scan = now
 
-                    self._handle_d_key(now)
-                    self._handle_r_key(now)
+                    self._key_handler.handle_d(now, self._key_data)
+                    self._key_handler.handle_r(now, self._key_data)
 
                     if self.cfg.w_mode == 1:
-                        self._handle_w_mode1(now)
+                        self._key_handler.handle_w_mode1(now, self._key_data)
                     else:
-                        self._handle_w_mode2()
+                        self._key_handler.handle_w_mode2(self._key_data)
 
             except pyautogui.FailSafeException as e:
                 msg = "PyAutoGUI FailSafe ausgelöst – Maus in Bildschirmecke. Bot gestoppt."

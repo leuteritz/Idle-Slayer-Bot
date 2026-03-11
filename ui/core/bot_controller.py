@@ -51,7 +51,7 @@ class BotController:
         for k in ("d", "r", "w", "chest_hunts", "chests_opened", "mimics"):
             self._key_data[k] = 0
 
-        from bot.bot import IdleSlayerBot
+        from bot.core.bot import IdleSlayerBot
         bot = IdleSlayerBot(self._bot_config, self._chest_config, self._bonus_config,
                             key_data=self._key_data)
 

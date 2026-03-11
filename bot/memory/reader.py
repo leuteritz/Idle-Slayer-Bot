@@ -1,7 +1,6 @@
 import ctypes
 from ctypes import wintypes
 import struct
-import time
 
 import numpy as np
 
@@ -31,20 +30,7 @@ class MEMORY_BASIC_INFORMATION(ctypes.Structure):
     ]
 
 
-def format_sp(value: float) -> str:
-    """Format a number with K/M/B/T suffix."""
-    if value >= 1e12:
-        return f"{value / 1e12:.3f} T"
-    if value >= 1e9:
-        return f"{value / 1e9:.3f} B"
-    if value >= 1e6:
-        return f"{value / 1e6:.3f} M"
-    if value >= 1e3:
-        return f"{value / 1e3:.3f} K"
-    return f"{value:,.2f}"
-
-
-class GameMemory:
+class MemoryReader:
     def __init__(self, hwnd: int):
         pid = wintypes.DWORD()
         ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
@@ -129,47 +115,3 @@ class GameMemory:
             if val is not None and prev_value < val <= ceiling:
                 results.append(addr)
         return results
-
-    # ── Auto-Find: scannt und filtert automatisch ────────────
-
-    def auto_find(self, initial_value: float, stop_event=None,
-                  log_fn=print, max_rounds: int = 5, wait: float = 5.0):
-        tol = max(100.0, initial_value * 0.002)
-        log_fn(f"[ISP] Scanne nach Wert ~{format_sp(initial_value)} (±{tol:.0f})...")
-
-        candidates = self.scan_double(initial_value, tolerance=tol)
-        log_fn(f"[ISP] {len(candidates)} Kandidaten gefunden")
-
-        if not candidates:
-            log_fn("[ISP] Keine Treffer – ISP-Tracking deaktiviert.")
-            return None
-        if len(candidates) == 1:
-            log_fn(f"[ISP] Adresse gefunden: {candidates[0]:#x}")
-            return candidates[0]
-
-        prev = initial_value
-        for i in range(max_rounds):
-            if stop_event and stop_event.is_set():
-                return None
-            log_fn(f"[ISP] Warte {wait:.0f}s auf Wertänderung... "
-                   f"(Runde {i + 1}/{max_rounds})")
-            time.sleep(wait)
-            if stop_event and stop_event.is_set():
-                return None
-            candidates = self.rescan_increased(candidates, prev)
-            log_fn(f"[ISP] {len(candidates)} Kandidaten übrig")
-            if not candidates:
-                log_fn("[ISP] Alle Kandidaten verloren – ISP-Tracking fehlgeschlagen.")
-                return None
-            if len(candidates) <= 3:
-                log_fn(f"[ISP] Adresse gefunden: {candidates[0]:#x}")
-                return candidates[0]
-            val = self.read_double(candidates[0])
-            if val is not None:
-                prev = val
-
-        if candidates:
-            log_fn(f"[ISP] Beste Adresse: {candidates[0]:#x} "
-                   f"({len(candidates)} Kandidaten übrig)")
-            return candidates[0]
-        return None

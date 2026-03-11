@@ -2,7 +2,7 @@ import numpy as np
 import time
 import mss
 
-from bot.template_matcher import TemplateMatcher, MINIGAMES_DIR
+from bot.vision.matcher import TemplateMatcher, MINIGAMES_DIR
 from bot.config import BonusStageConfig
 
 

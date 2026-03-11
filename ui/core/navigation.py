@@ -218,7 +218,7 @@ class NavigationManager:
         sp = self._sp_data.get("value")
         sp_start = self._sp_data.get("session_start")
         if sp is not None:
-            from bot.memory_reader import format_sp
+            from bot.memory.format import format_sp
             self._sp_label.configure(text=f"SP: {format_sp(sp)}", fg=GREEN)
             if sp_start is not None and sp_start > 0:
                 farmed = max(0.0, sp - sp_start)
