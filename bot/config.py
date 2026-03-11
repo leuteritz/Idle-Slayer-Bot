@@ -28,12 +28,6 @@ class ChestHuntConfig:
 
 
 @dataclass
-class TargetConfig:
-    filename: str = ""
-    priority: int = 1
-
-
-@dataclass
 class BonusStageConfig:
     enabled:                 bool  = True                    # enable bonus stage minigame automation
     template_swipe_left:     str   = "bonus_stage_left.png"  # template for left swipe arrow

@@ -5,15 +5,14 @@ import os
 from bot.vision.capture import grab_gray as _grab_gray
 
 _PROJECT_ROOT  = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ENEMIES_DIR    = os.path.join(_PROJECT_ROOT, "assets", "enemies")
 MINIGAMES_DIR  = os.path.join(_PROJECT_ROOT, "assets", "minigames")
 
 
 class TemplateMatcher:
 
-    def _load_template(self, filename: str, assets_dir: str = None) -> np.ndarray:
-        """Lädt ein Template. Nutzt assets_dir falls angegeben, sonst assets/enemies/."""
-        directory = assets_dir if assets_dir else ENEMIES_DIR
+    def _load_template(self, filename: str, assets_dir: str) -> np.ndarray:
+        """Lädt ein Template aus assets_dir."""
+        directory = assets_dir
         path      = os.path.join(directory, filename)
         image     = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         if image is None:
