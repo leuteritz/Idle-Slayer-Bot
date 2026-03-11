@@ -6,6 +6,9 @@ An automation bot for the game [Idle Slayer](https://store.steampowered.com/app/
 
 ---
 
+<img width="600" height="600" alt="image" src="https://github.com/user-attachments/assets/21c19a88-16d0-4550-8d0d-a3df8c2b8d35" />
+
+
 ## Features
 
 -   **Automated key presses** — D key (attack), R key (prestige/rebirth), W key (movement/combat)
