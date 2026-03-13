@@ -8,6 +8,13 @@ An automation bot for the game [Idle Slayer](https://store.steampowered.com/app/
 
 <img width="600" height="600" alt="image" src="https://github.com/user-attachments/assets/21c19a88-16d0-4550-8d0d-a3df8c2b8d35" />
 
+## Download
+
+Eine fertige Windows-EXE (kein Python erforderlich) ist unter **[Releases](../../releases/latest)** verfügbar.
+
+Einfach `idle_slayer_bot.exe` herunterladen und starten.
+
+---
 
 ## Features
 
@@ -43,6 +50,25 @@ git clone https://github.com/your-username/idle-slayer-bot.git
 cd idle-slayer-bot
 pip install opencv-python mss pyautogui pywin32
 ```
+
+---
+
+## Build from Source (EXE)
+
+Voraussetzung: Python 3.9+, alle Abhängigkeiten installiert.
+
+```bash
+# 1. Zusätzliche Build-Tools installieren
+pip install pillow pyinstaller
+
+# 2. Icon generieren (einmalig, erzeugt assets/icon.ico aus assets/icon.png)
+python make_icon.py
+
+# 3. EXE bauen
+pyinstaller idle_slayer_bot.spec
+```
+
+Die fertige EXE liegt danach unter `dist/idle_slayer_bot.exe`.
 
 ---
 
