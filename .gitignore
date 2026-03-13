@@ -21,3 +21,10 @@ CLAUDE.md
 
 
 config.json
+
+# PyInstaller build artifacts
+build/
+dist/
+
+# Generated icon file (built from assets/icon.png by make_icon.py)
+assets/icon.ico
